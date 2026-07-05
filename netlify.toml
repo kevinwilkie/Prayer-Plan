@@ -1,0 +1,18 @@
+# Netlify config — this is a static site with no build step.
+# It serves the repository root (index.html and its assets) as-is.
+
+[build]
+  publish = "."
+  command = ""
+
+# Versioned assets (styles.css?v=NN, app.js?v=NN, …) bust their own cache,
+# but the HTML and service worker must always revalidate so updates roll out.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
