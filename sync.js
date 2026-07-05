@@ -68,6 +68,16 @@
   var auth = firebase.auth();
   var db = firebase.firestore();
   function planRef(uid) { return db.collection("plans").doc(uid); }
+  // Store the whole bundle as ONE JSON string. Our keys contain dots
+  // (prayerPlan.content.v1), and Firestore treats dotted map keys as nested
+  // paths — which silently blanked the data. A single string field is dot-proof.
+  function cloudFromSnap(snap) {
+    if (!snap || !snap.exists) return null;
+    var d = snap.data() || {};
+    if (typeof d.blob === "string") { try { return JSON.parse(d.blob); } catch (e) { return null; } }
+    if (d.data && typeof d.data === "object") return d.data; // legacy format
+    return null;
+  }
 
   var currentUser = null, lastPushed = null, timer = null;
   var authMode = "login"; // welcome screen defaults to Sign in (newcomers tap "Create one")
@@ -144,7 +154,7 @@
   function pushNow() {
     if (!currentUser) return Promise.resolve();
     var b = readLocal(), s = canon(b);
-    return planRef(currentUser.uid).set({ data: b, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+    return planRef(currentUser.uid).set({ blob: JSON.stringify(b), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
       .then(function () { lastPushed = s; setStatus("Synced ✓"); })
       .catch(function (e) { setStatus("Sync error: " + ((e && e.message) || "unknown")); });
   }
@@ -152,7 +162,7 @@
   function manualRestore() {
     setStatus("Restoring…");
     return planRef(currentUser.uid).get().then(function (snap) {
-      var cloud = snap.exists ? (snap.data() || {}).data : null;
+      var cloud = cloudFromSnap(snap);
       if (cloud && bundleHasContent(cloud)) { writeLocal(cloud); window.location.reload(); }
       else setStatus("Nothing is saved in the cloud yet — try Back up to cloud.");
     }).catch(function (e) { setStatus("Restore error: " + ((e && e.message) || "unknown")); });
@@ -175,7 +185,7 @@
     try { localStorage.setItem("prayerPlan.authed", "1"); } catch (e) {}
     setStatus("Syncing…"); updateUI(user);
     planRef(user.uid).get().then(function (snap) {
-      var cloud = snap.exists ? (snap.data() || {}).data : null;
+      var cloud = cloudFromSnap(snap);
       var localB = readLocal();
       var localHas = bundleHasContent(localB);
       var cloudHas = cloud && bundleHasContent(cloud);
