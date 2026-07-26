@@ -1,17 +1,14 @@
 /* =============================================================================
- * Prayer Plan — rotation engine, day history, check-off & notes, bank editor,
- * and Prayer Cards (inspired by Paul Miller's "A Praying Life").
+ * Prayer Plan — "Sanctuary" build.
+ *
+ * Rotation engine, day history, check-off & notes, bank editor, Prayer Cards
+ * (inspired by Paul Miller's "A Praying Life"), answered-prayer timeline, and a
+ * combined More screen (theme, Attributes of God, back up / import, about).
  *
  * Each day draws a fresh set from the banks in data.js, shuffled and
  * non-repeating until a bank is exhausted, then reshuffled. Draws are saved per
- * day; past days stay browsable. Check-offs/notes save per day.
- *
- * Bank tabs let you add to each ACTS bank. Prayer Cards turn each Supplication
- * person into a flip-through index card (requests stay in sync with the
- * Supplication bank) with a Scripture to pray and a dated answered-prayer log.
- *
- * All additions persist in this browser (localStorage). Edit starting content
- * in data.js.
+ * day; past days stay browsable. Check-offs/notes save per day. All additions
+ * persist in this browser (localStorage) and sync via sync.js when signed in.
  * ============================================================================= */
 (function () {
   "use strict";
@@ -20,33 +17,34 @@
   var CUSTOM_KEY = "prayerPlan.banks.v1";
   var CONTENT_KEY = "prayerPlan.content.v1";
   var CARDS_KEY = "prayerPlan.cards.v1";
+  var THEME_KEY = "prayerPlan.theme";   // legacy (light/dark) — no longer used
+  var STYLE_KEY = "prayerPlan.style";   // now holds the palette (sanctuary/candlelight/night)
+  var TODAY_MODE_KEY = "prayerPlan.todayMode";
+
   var banks = PRAYER_PLAN.banks;
   var subjects = PRAYER_PLAN.supplication.subjects;
   var counts = PRAYER_PLAN.dailyCounts || {};
 
   // ---- element handles ------------------------------------------------------
-  var headingEl = document.getElementById("day-heading");
-  var contentEl = document.getElementById("day-content");
-  var attributesEl = document.getElementById("attributes-content");
-  var bankContentEl = document.getElementById("bank-content");
-  var cardsContentEl = document.getElementById("cards-content");
-  var cardCounterEl = document.getElementById("card-counter");
-  var cardFilterEl = document.getElementById("card-filter");
-  var answeredContentEl = document.getElementById("answered-content");
-  var prevBtn = document.getElementById("prev-day");
-  var nextBtn = document.getElementById("next-day");
-  var prevCardBtn = document.getElementById("prev-card");
-  var nextCardBtn = document.getElementById("next-card");
-  var dayView = document.getElementById("day-view");
-  var attributesView = document.getElementById("attributes-view");
-  var bankView = document.getElementById("bank-view");
-  var cardsView = document.getElementById("cards-view");
-  var answeredView = document.getElementById("answered-view");
-  var settingsView = document.getElementById("settings-view");
-  var settingsContentEl = document.getElementById("settings-content");
+  var thSeasonEl = document.getElementById("th-season");
+  var thProgressEl = document.getElementById("th-progress");
+  var thDateEl = document.getElementById("th-date");
+  var thJumpEl = document.getElementById("th-jump");
+  var thSegmentsEl = document.getElementById("th-segments");
+  var prevDayBtn = document.getElementById("prev-day");
+  var nextDayBtn = document.getElementById("next-day");
   var modeListBtn = document.getElementById("mode-list");
   var modeCardsBtn = document.getElementById("mode-cards");
-  var viewTabs = document.querySelectorAll(".view-tab");
+  var todayContentEl = document.getElementById("today-content");
+  var cardFilterChipsEl = document.getElementById("card-filter-chips");
+  var cardsContentEl = document.getElementById("cards-content");
+  var bankTabChipsEl = document.getElementById("bank-tab-chips");
+  var bankContentEl = document.getElementById("bank-content");
+  var answeredContentEl = document.getElementById("answered-content");
+  var moreContentEl = document.getElementById("more-content");
+  var themeMeta = document.getElementById("theme-color-meta");
+  var tabs = document.querySelectorAll(".tab");
+  var screens = document.querySelectorAll(".screen");
 
   // ---- tiny helpers ---------------------------------------------------------
   function el(tag, className, text) {
@@ -64,9 +62,7 @@
     return a;
   }
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
-  function keyFor(date) {
-    return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate());
-  }
+  function keyFor(date) { return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate()); }
   function dateFromKey(key) { var p = key.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
   var WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   var MONTHS = ["January", "February", "March", "April", "May", "June", "July",
@@ -75,13 +71,12 @@
     var d = new Date();
     return MONTHS[d.getMonth()].slice(0, 3) + " " + d.getDate() + ", " + d.getFullYear();
   }
+  function clone(x) { return JSON.parse(JSON.stringify(x)); }
+  function confirmDelete(label) { return (typeof window.confirm !== "function") || window.confirm("Delete “" + label + "”?"); }
 
   // ===========================================================================
-  // EDITABLE CONTENT STORE (banks + supplication) — fully user-editable.
-  // Seeded from data.js on first run, then owned by the user in localStorage.
-  // Any items previously added (legacy "additions") are migrated in.
+  // EDITABLE CONTENT STORE (banks + supplication)
   // ===========================================================================
-  function clone(x) { return JSON.parse(JSON.stringify(x)); }
   function seedContent() {
     return { version: 1, banks: clone(PRAYER_PLAN.banks),
       supplication: { subjects: clone(PRAYER_PLAN.supplication.subjects) } };
@@ -128,9 +123,9 @@
   function saveContent() { try { localStorage.setItem(CONTENT_KEY, JSON.stringify(content)); } catch (e) {} }
   banks = content.banks;
   subjects = content.supplication.subjects;
-  if (!localStorage.getItem(CONTENT_KEY)) saveContent(); // persist seed/migration on first run
+  if (!localStorage.getItem(CONTENT_KEY)) saveContent();
 
-  // Prayer-card extras (Scripture + answered-prayer log), keyed by subject name.
+  // Prayer-card extras (Scripture + answered/reflection log), keyed by card key.
   function loadCards() {
     try { var c = JSON.parse(localStorage.getItem(CARDS_KEY)); return (c && c.extras) ? c : { extras: {} }; }
     catch (e) { return { extras: {} }; }
@@ -143,39 +138,18 @@
     return cards.extras[name];
   }
 
-  // ---- bank item ops (Adoration / Confession / Thanksgiving) -----------------
+  // ---- bank + supplication ops ----------------------------------------------
   function addBankItem(name, item) { banks[name].push(item); saveContent(); resetQueue(name); }
-  function editBankItem(name, idx, item) {
-    if (idx < 0 || idx >= banks[name].length) return;
-    banks[name][idx] = item; saveContent();
-  }
-  function deleteBankItem(name, idx) {
-    if (idx < 0 || idx >= banks[name].length) return;
-    banks[name].splice(idx, 1); saveContent(); resetQueue(name);
-  }
-
-  // ---- supplication ops (shared by the bank tab AND prayer cards) ------------
+  function editBankItem(name, idx, item) { if (idx >= 0 && idx < banks[name].length) { banks[name][idx] = item; saveContent(); } }
+  function deleteBankItem(name, idx) { if (idx >= 0 && idx < banks[name].length) { banks[name].splice(idx, 1); saveContent(); resetQueue(name); } }
   function subjectByName(name) { return subjects.filter(function (s) { return s.name === name; })[0]; }
-  function addRequest(name, text) {
-    var subj = subjectByName(name); if (!subj) return;
-    subj.requests.push(text); saveContent(); resetReqQueue(name);
-  }
-  function editRequest(name, idx, text) {
-    var subj = subjectByName(name); if (!subj || idx < 0 || idx >= subj.requests.length) return;
-    subj.requests[idx] = text; saveContent();
-  }
-  function removeRequestAt(name, idx) {
-    var subj = subjectByName(name); if (!subj) return;
-    subj.requests.splice(idx, 1); saveContent(); resetReqQueue(name);
-  }
-  function addSubject(name) {
-    if (!name || subjectByName(name)) return false;
-    subjects.push({ name: name, requests: [] }); saveContent(); resetReqQueue(name); return true;
-  }
+  function addRequest(name, text) { var s = subjectByName(name); if (s) { s.requests.push(text); saveContent(); resetReqQueue(name); } }
+  function removeRequestAt(name, idx) { var s = subjectByName(name); if (s) { s.requests.splice(idx, 1); saveContent(); resetReqQueue(name); } }
+  function addSubject(name) { if (!name || subjectByName(name)) return false; subjects.push({ name: name, requests: [] }); saveContent(); resetReqQueue(name); return true; }
   function renameSubject(oldName, newName) {
     newName = (newName || "").trim();
     if (!newName) return false;
-    if (newName !== oldName && subjectByName(newName)) return false; // name already used
+    if (newName !== oldName && subjectByName(newName)) return false;
     var subj = subjectByName(oldName); if (!subj) return false;
     subj.name = newName;
     if (state.queues.supplication[oldName]) {
@@ -229,7 +203,6 @@
     }
     return picked;
   }
-
   function generatePlan(key) {
     var date = dateFromKey(key);
     var q = state.queues;
@@ -242,13 +215,12 @@
       return { name: subj.name, request: subj.requests[idx] };
     });
     return { key: key, weekday: WEEKDAYS[date.getDay()],
-      label: MONTHS[date.getMonth()] + " " + date.getDate() + ", " + date.getFullYear(),
+      label: WEEKDAYS[date.getDay()] + ", " + MONTHS[date.getMonth()] + " " + date.getDate(),
       adoration: aIdx.map(function (i) { return banks.adoration[i]; }),
       confession: cIdx.map(function (i) { return banks.confession[i]; }),
       thanksgiving: tIdx.map(function (i) { return banks.thanksgiving[i]; }),
       supplication: supp };
   }
-
   function ensureToday() {
     var key = keyFor(new Date());
     if (!state.history[key]) { state.history[key] = generatePlan(key); state.order.push(key); saveState(); }
@@ -256,110 +228,192 @@
   }
   var todayKey = ensureToday();
   var viewKey = todayKey;
+  function journalFor(key) { if (!state.journal[key]) state.journal[key] = { checks: {}, notes: "" }; return state.journal[key]; }
 
-  var TODAY_MODE_KEY = "prayerPlan.todayMode";
   var todayMode = "list";
   try { var m = localStorage.getItem(TODAY_MODE_KEY); if (m === "cards" || m === "list") todayMode = m; } catch (e) {}
   var dayCardIndex = 0;
 
-  function journalFor(key) {
-    if (!state.journal[key]) state.journal[key] = { checks: {}, notes: "" };
-    return state.journal[key];
+  // ===========================================================================
+  // LITURGICAL SEASON (Western/Roman) + palette
+  // ===========================================================================
+  function ymd(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function addDays(d, n) { var r = new Date(d); r.setDate(r.getDate() + n); return ymd(r); }
+  function gregorianEaster(y) {
+    var a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4,
+      f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3),
+      h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4,
+      l = (32 + 2 * e + 2 * i - h - k) % 7, mth = Math.floor((a + 11 * h + 22 * l) / 451),
+      month = Math.floor((h + l - 7 * mth + 114) / 31), day = ((h + l - 7 * mth + 114) % 31) + 1;
+    return new Date(y, month - 1, day);
+  }
+  function adventSunday(y) { var d = new Date(y, 10, 30), dow = d.getDay(); return addDays(d, dow <= 3 ? -dow : 7 - dow); }
+  function liturgicalSeason(t) {
+    var day = ymd(t), Y = day.getFullYear();
+    var easter = ymd(gregorianEaster(Y));
+    var ashWed = addDays(easter, -46);
+    var pentecost = addDays(easter, 49);
+    var advent1 = adventSunday(Y);
+    var christmas = new Date(Y, 11, 25);
+    var epiphany = new Date(Y, 0, 6);
+    if (day <= epiphany) return "christmas";
+    if (day >= ashWed && day < easter) return "lent";
+    if (day.getTime() === pentecost.getTime()) return "pentecost";
+    if (day >= easter && day < pentecost) return "easter";
+    if (day >= advent1 && day < christmas) return "advent";
+    if (day >= christmas) return "christmas";
+    return "ordinary";
+  }
+  var SEASON_LABEL = { ordinary: "Ordinary Time", advent: "Advent", lent: "Lent",
+    easter: "Easter", christmas: "Christmas", pentecost: "Pentecost" };
+  var SEASON_ACC = { ordinary: "#3f7d4f", advent: "#5d4a86", lent: "#6b4a8a",
+    easter: "#b5862c", christmas: "#b5862c", pentecost: "#b3402f" };
+  var season = liturgicalSeason(new Date());
+  function applySeason() {
+    document.documentElement.setAttribute("data-season", season);
+    if (themeMeta) themeMeta.setAttribute("content", SEASON_ACC[season] || SEASON_ACC.ordinary);
+  }
+
+  var STYLES = ["sanctuary", "candlelight", "night"];
+  var STYLE_LABEL = { sanctuary: "Sanctuary", candlelight: "Candlelight", night: "Night" };
+  var STYLE_SWATCH = {
+    sanctuary: { bg: "#faf8f4", ink: "#2b2822" },
+    candlelight: { bg: "#f1e6cd", ink: "#3a2c1a" },
+    night: { bg: "#211f1a", ink: "#ece7da" }
+  };
+  function currentStyle() {
+    try { var s = localStorage.getItem(STYLE_KEY); if (STYLES.indexOf(s) > -1) return s; } catch (e) {}
+    return "sanctuary";
+  }
+  function applyStyle(choice) {
+    if (STYLES.indexOf(choice) < 0) choice = "sanctuary";
+    document.documentElement.setAttribute("data-style", choice);
+    try { localStorage.setItem(STYLE_KEY, choice); } catch (e) {}
   }
 
   // ===========================================================================
-  // DAY VIEW
+  // TODAY VIEW
   // ===========================================================================
-  function renderScripture(parent, scripture) {
-    var fig = el("figure", "scripture");
-    fig.appendChild(el("figcaption", "scripture-ref", scripture.ref));
-    fig.appendChild(el("blockquote", "scripture-text", scripture.text));
-    parent.appendChild(fig);
+  var SECTIONS = [
+    { key: "adoration", label: "Adoration" },
+    { key: "confession", label: "Confession" },
+    { key: "thanksgiving", label: "Thanksgiving" },
+    { key: "supplication", label: "Supplication" }
+  ];
+  function scripturesOf(item, type) {
+    if (type === "thanksgiving") return item.scriptures || [];
+    return item.scripture ? [item.scripture] : [];
   }
 
-  function buildCard(section, letter, kind, label, title) {
-    var card = el("article", "card card--" + kind);
-    var head = el("header", "card-head");
-    head.appendChild(el("span", "card-badge", letter));
-    var heading = el("div", "card-heading");
-    heading.appendChild(el("span", "card-label", label));
-    if (title) heading.appendChild(el("span", "card-title", title));
-    head.appendChild(heading);
+  function renderToday() {
+    var plan = state.history[viewKey];
     var jr = journalFor(viewKey);
-    var check = el("button", "check-toggle"); check.type = "button";
+
+    // header bits
+    thSeasonEl.textContent = SEASON_LABEL[season] || "Ordinary Time";
+    thDateEl.textContent = plan.label;
+    var done = SECTIONS.filter(function (s) { return jr.checks[s.key]; }).length;
+    thProgressEl.textContent = done + " of 4 prayed";
+    thSegmentsEl.innerHTML = "";
+    SECTIONS.forEach(function (s) {
+      var seg = el("div", "th-seg" + (jr.checks[s.key] ? " is-on" : ""));
+      thSegmentsEl.appendChild(seg);
+    });
+    var pos = state.order.indexOf(viewKey);
+    prevDayBtn.disabled = pos <= 0;
+    nextDayBtn.disabled = pos >= state.order.length - 1;
+    thJumpEl.innerHTML = "";
+    if (viewKey !== todayKey) {
+      var jb = el("button", null, "Jump to today"); jb.type = "button";
+      jb.addEventListener("click", function () { dayCardIndex = 0; viewKey = todayKey; renderToday(); });
+      thJumpEl.appendChild(jb);
+    }
+    modeListBtn.classList.toggle("is-active", todayMode === "list");
+    modeCardsBtn.classList.toggle("is-active", todayMode === "cards");
+
+    todayContentEl.innerHTML = "";
+    if (todayMode === "cards") renderTodayCards(plan);
+    else renderTodayList(plan);
+  }
+
+  function actsRow(sectionKey, label, items, type) {
+    var jr = journalFor(viewKey);
+    var on = !!jr.checks[sectionKey];
+    var row = el("div", "acts-row" + (on ? " is-on" : ""));
+    var check = el("button", "acts-check" + (on ? " is-on" : "")); check.type = "button";
     check.setAttribute("aria-label", "Mark " + label + " as prayed");
-    function paint() {
-      var on = !!jr.checks[section];
-      check.classList.toggle("is-checked", on);
-      check.setAttribute("aria-pressed", on ? "true" : "false");
-      check.innerHTML = on ? "&#10003;" : "";
-      card.classList.toggle("is-prayed", on);
-    }
-    check.addEventListener("click", function () { jr.checks[section] = !jr.checks[section]; saveState(); paint(); });
-    paint(); head.appendChild(check); card.appendChild(head);
-    return card;
-  }
-
-  function appendTermItems(card, items) {
+    check.innerHTML = on ? "&#10003;" : "";
+    check.addEventListener("click", function () { jr.checks[sectionKey] = !jr.checks[sectionKey]; saveState(); renderToday(); });
+    row.appendChild(check);
+    var body = el("div", "acts-body");
+    body.appendChild(el("div", "acts-label k-" + type, label));
     items.forEach(function (item) {
-      var block = el("div", "term-block");
-      var line = el("p", "term-line");
-      line.appendChild(el("span", "term-name", item.term));
-      if (item.definition) line.appendChild(el("span", "term-def", " — " + item.definition));
-      block.appendChild(line);
-      if (item.scripture) renderScripture(block, item.scripture);
-      card.appendChild(block);
+      var it = el("div", "acts-item");
+      it.appendChild(el("div", "acts-title", type === "thanksgiving" ? item.title : item.term));
+      if (type !== "thanksgiving" && item.definition) it.appendChild(el("div", "acts-def", item.definition));
+      scripturesOf(item, type).forEach(function (s) {
+        if (s.text) it.appendChild(el("div", "acts-quote", "“" + s.text + "”"));
+        if (s.ref) it.appendChild(el("div", "acts-ref", s.ref));
+      });
+      body.appendChild(it);
     });
+    row.appendChild(body);
+    return row;
   }
 
-  function renderDay(key) {
-    viewKey = key;
-    var plan = state.history[key];
-    headingEl.innerHTML = "";
-    var top = el("div", "day-heading-top");
-    top.appendChild(el("span", "day-name", plan.weekday));
-    if (key === todayKey) top.appendChild(el("span", "today-badge", "Today"));
-    headingEl.appendChild(top);
-    headingEl.appendChild(el("span", "day-date", plan.label));
-    if (key !== todayKey) {
-      var jump = el("button", "jump-today", "Jump to today"); jump.type = "button";
-      jump.addEventListener("click", function () { dayCardIndex = 0; renderDay(todayKey); });
-      headingEl.appendChild(jump);
+  function renderTodayList(plan) {
+    var wrap = el("div", "today-list");
+    if (plan.adoration.length) wrap.appendChild(actsRow("adoration", "Adoration", plan.adoration, "adoration"));
+    if (plan.confession.length) wrap.appendChild(actsRow("confession", "Confession", plan.confession, "confession"));
+    if (plan.thanksgiving.length) wrap.appendChild(actsRow("thanksgiving", "Thanksgiving", plan.thanksgiving, "thanksgiving"));
+
+    if (plan.supplication.length) {
+      var jr = journalFor(viewKey);
+      var on = !!jr.checks.supplication;
+      var row = el("div", "acts-row" + (on ? " is-on" : ""));
+      var check = el("button", "acts-check" + (on ? " is-on" : "")); check.type = "button";
+      check.setAttribute("aria-label", "Mark Supplication as prayed");
+      check.innerHTML = on ? "&#10003;" : "";
+      check.addEventListener("click", function () { jr.checks.supplication = !jr.checks.supplication; saveState(); renderToday(); });
+      row.appendChild(check);
+      var body = el("div", "acts-body");
+      body.appendChild(el("div", "acts-label k-supplication", "Supplication"));
+      var people = el("div", "supp-people");
+      plan.supplication.forEach(function (item) {
+        var p = el("div");
+        p.appendChild(el("span", "supp-person-name", item.name));
+        p.appendChild(document.createTextNode(" "));
+        p.appendChild(el("span", "supp-person-req", "— " + (item.request || "—")));
+        people.appendChild(p);
+      });
+      body.appendChild(people);
+      row.appendChild(body);
+      wrap.appendChild(row);
     }
-    updateModeToggle();
-    contentEl.innerHTML = "";
-    if (todayMode === "cards") renderDayCards(plan);
-    else renderDayList(plan, key);
-    var pos = state.order.indexOf(key);
-    prevBtn.disabled = pos <= 0;
-    nextBtn.disabled = pos >= state.order.length - 1;
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
 
-  function renderDayList(plan, key) {
-    var a = buildCard("adoration", "A", "adoration", "Adoration",
-      plan.adoration.map(function (x) { return x.term; }).join(" · "));
-    appendTermItems(a, plan.adoration); contentEl.appendChild(a);
-    var c = buildCard("confession", "C", "confession", "Confession",
-      plan.confession.map(function (x) { return x.term; }).join(" · "));
-    appendTermItems(c, plan.confession); contentEl.appendChild(c);
-    var t = buildCard("thanksgiving", "T", "thanksgiving", "Thanksgiving",
-      plan.thanksgiving.map(function (x) { return x.title; }).join(" · "));
-    plan.thanksgiving.forEach(function (theme) { theme.scriptures.forEach(function (s) { renderScripture(t, s); }); });
-    contentEl.appendChild(t);
-    var s = buildCard("supplication", "S", "supplication", "Supplication", "");
-    var list = el("ul", "supplication-list");
-    plan.supplication.forEach(function (item) {
-      var li = el("li", "supplication-item");
-      li.appendChild(el("span", "supplication-subject", item.name));
-      li.appendChild(el("span", "supplication-request", item.request || "—"));
-      list.appendChild(li);
+    // Notes
+    var notes = el("div", "notes-block");
+    notes.appendChild(el("div", "notes-label", "Notes"));
+    var jr2 = journalFor(viewKey);
+    var ta = el("textarea", "notes-area");
+    ta.placeholder = "Write a prayer, a reflection, or anything God brings to mind…";
+    ta.value = jr2.notes || ""; ta.rows = 3;
+    var timer = null;
+    ta.addEventListener("input", function () {
+      jr2.notes = ta.value;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(saveState, 400);
     });
-    s.appendChild(list); contentEl.appendChild(s);
-    contentEl.appendChild(buildNotesCard(key));
+    notes.appendChild(ta);
+    wrap.appendChild(notes);
+
+    if (!plan.adoration.length && !plan.confession.length && !plan.thanksgiving.length && !plan.supplication.length) {
+      wrap.insertBefore(el("div", "empty-note", "Your banks are empty. Add prayers in Banks, or import a plan from More → Back up / move devices."), wrap.firstChild);
+    }
+    todayContentEl.appendChild(wrap);
   }
 
-  // Today's plan as a flip-through deck of prayer cards.
+  // Today plan as a flip-through deck.
   function todayDeck(plan) {
     var d = [];
     plan.adoration.forEach(function (it) { d.push({ type: "adoration", item: it }); });
@@ -368,303 +422,75 @@
     plan.supplication.forEach(function (s) { d.push({ type: "supplication", supp: s }); });
     return d;
   }
+  var CAT_LABEL = { adoration: "Adoration", confession: "Confession", thanksgiving: "Thanksgiving", supplication: "Supplication" };
 
-  function buildTodayCard(entry) {
-    var cat = CARD_CAT[entry.type];
-    var card = el("article", "prayer-card prayer-card--" + cat.kind);
-    var head = el("header", "pc-head");
-    head.appendChild(el("span", "pc-chip pc-chip--" + cat.kind, cat.label));
-    var title = entry.type === "supplication" ? entry.supp.name : (entry.item.term || entry.item.title);
-    head.appendChild(el("h2", "pc-title", title));
-    card.appendChild(head);
-    var body = el("div", "pc-body");
-    if (entry.type === "supplication") {
-      var ex = cards.extras[entry.supp.name];
-      if (ex && ex.scripture && (ex.scripture.ref || ex.scripture.text)) body.appendChild(buildScriptureDisplay([ex.scripture]));
-      var reqSec = el("section", "pc-section");
-      reqSec.appendChild(el("h3", "pc-label", "Pray for"));
-      var ul = el("ul", "pc-requests");
-      var li = el("li", "pc-request");
-      li.appendChild(el("span", "pc-bullet", "•"));
-      li.appendChild(el("span", "request-text", entry.supp.request || "—"));
-      ul.appendChild(li); reqSec.appendChild(ul); body.appendChild(reqSec);
-    } else {
-      if (entry.item.definition) {
-        var d = el("section", "pc-section");
-        d.appendChild(el("p", "pc-def", entry.item.definition));
-        body.appendChild(d);
-      }
-      var scrips = entry.type === "thanksgiving" ? (entry.item.scriptures || []) : (entry.item.scripture ? [entry.item.scripture] : []);
-      if (scrips.length) body.appendChild(buildScriptureDisplay(scrips));
-    }
-    card.appendChild(body);
-    return card;
-  }
-
-  function renderDayCards(plan) {
+  function renderTodayCards(plan) {
+    var wrap = el("div", "today-cards");
     var deck = todayDeck(plan);
+    if (deck.length === 0) {
+      wrap.appendChild(el("div", "empty-note", "No prayer points today. Add prayers in Banks."));
+      todayContentEl.appendChild(wrap);
+      return;
+    }
     if (dayCardIndex < 0) dayCardIndex = 0;
-    if (dayCardIndex > deck.length - 1) dayCardIndex = Math.max(0, deck.length - 1);
-    if (deck.length === 0) { contentEl.appendChild(el("p", "bank-intro", "No prayer points today.")); return; }
-    var nav = el("nav", "day-nav today-card-nav");
-    var prev = el("button", "day-arrow", "‹"); prev.type = "button"; prev.setAttribute("aria-label", "Previous card");
-    var counter = el("div", "card-counter", (dayCardIndex + 1) + " / " + deck.length);
-    var next = el("button", "day-arrow", "›"); next.type = "button"; next.setAttribute("aria-label", "Next card");
+    if (dayCardIndex > deck.length - 1) dayCardIndex = deck.length - 1;
+    var entry = deck[dayCardIndex];
+    var card = el("div", "deck-card tall");
+    var head = el("div", "deck-head");
+    head.appendChild(el("div", "deck-kind k-" + entry.type, CAT_LABEL[entry.type]));
+    head.appendChild(el("div", "deck-counter", (dayCardIndex + 1) + " / " + deck.length));
+    card.appendChild(head);
+    var title = entry.type === "supplication" ? entry.supp.name : (entry.item.term || entry.item.title);
+    card.appendChild(el("div", "deck-title", title));
+    if (entry.type === "supplication") {
+      card.appendChild(el("div", "blk-label", "Pray for"));
+      card.appendChild(el("div", "deck-req", entry.supp.request || "—"));
+    } else {
+      if (entry.type !== "thanksgiving" && entry.item.definition) card.appendChild(el("div", "deck-def", entry.item.definition));
+      scripturesOf(entry.item, entry.type).forEach(function (s) {
+        if (s.text) card.appendChild(el("div", "deck-quote", "“" + s.text + "”"));
+        if (s.ref) card.appendChild(el("div", "deck-ref", s.ref));
+      });
+    }
+    wrap.appendChild(card);
+
+    var nav = el("div", "deck-nav");
+    var prev = el("button", "round-btn", "‹"); prev.type = "button"; prev.setAttribute("aria-label", "Previous card");
+    var next = el("button", "round-btn", "›"); next.type = "button"; next.setAttribute("aria-label", "Next card");
     var single = deck.length <= 1;
     prev.disabled = single; next.disabled = single;
     prev.addEventListener("click", function () { stepDayCard(-1); });
     next.addEventListener("click", function () { stepDayCard(1); });
-    nav.appendChild(prev); nav.appendChild(counter); nav.appendChild(next);
-    contentEl.appendChild(nav);
-    contentEl.appendChild(buildTodayCard(deck[dayCardIndex]));
+    nav.appendChild(prev);
+    nav.appendChild(el("div", "swipe-hint", "swipe to flip through"));
+    nav.appendChild(next);
+    wrap.appendChild(nav);
+    todayContentEl.appendChild(wrap);
   }
-
   function stepDayCard(delta) {
     var len = todayDeck(state.history[viewKey]).length;
     if (len === 0) return;
-    dayCardIndex = ((dayCardIndex + delta) % len + len) % len; // wrap around
-    renderDay(viewKey);
+    dayCardIndex = ((dayCardIndex + delta) % len + len) % len;
+    renderToday();
   }
-
   function setTodayMode(mode) {
     todayMode = mode; dayCardIndex = 0;
     try { localStorage.setItem(TODAY_MODE_KEY, mode); } catch (e) {}
-    renderDay(viewKey);
+    renderToday();
   }
-  function updateModeToggle() {
-    if (modeListBtn) modeListBtn.classList.toggle("is-active", todayMode === "list");
-    if (modeCardsBtn) modeCardsBtn.classList.toggle("is-active", todayMode === "cards");
-  }
-  if (modeListBtn) modeListBtn.addEventListener("click", function () { setTodayMode("list"); });
-  if (modeCardsBtn) modeCardsBtn.addEventListener("click", function () { setTodayMode("cards"); });
-
-  function buildNotesCard(key) {
-    var jr = journalFor(key);
-    var card = el("article", "card card--notes");
-    var head = el("header", "card-head");
-    head.appendChild(el("span", "card-badge", "✎"));
-    var heading = el("div", "card-heading");
-    heading.appendChild(el("span", "card-label", "Notes"));
-    head.appendChild(heading); card.appendChild(head);
-    var ta = el("textarea", "notes-input");
-    ta.placeholder = "Write a prayer, a reflection, or anything God brings to mind…";
-    ta.value = jr.notes || ""; ta.rows = 3;
-    var timer = null;
-    ta.addEventListener("input", function () {
-      jr.notes = ta.value;
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(saveState, 400);
-    });
-    card.appendChild(ta); return card;
-  }
-
-  function step(delta) {
+  function stepDay(delta) {
     var pos = state.order.indexOf(viewKey);
     var next = pos + delta;
-    if (next >= 0 && next < state.order.length) { dayCardIndex = 0; renderDay(state.order[next]); }
-  }
-  prevBtn.addEventListener("click", function () { step(-1); });
-  nextBtn.addEventListener("click", function () { step(1); });
-
-  // ===========================================================================
-  // SHARED FORM HELPERS
-  // ===========================================================================
-  function labeledInput(labelText, input) {
-    var wrap = el("label", "field");
-    wrap.appendChild(el("span", "field-label", labelText));
-    wrap.appendChild(input); return wrap;
-  }
-  function textInput(ph) { var i = el("input", "field-input"); i.type = "text"; i.placeholder = ph; return i; }
-  function areaInput(ph) { var i = el("textarea", "field-input"); i.placeholder = ph; i.rows = 2; return i; }
-  function removeBtn(onClick) {
-    var b = el("button", "item-remove", "×"); b.type = "button";
-    b.setAttribute("aria-label", "Delete");
-    b.addEventListener("click", onClick); return b;
-  }
-  function editBtn(onClick) {
-    var b = el("button", "item-edit", "Edit"); b.type = "button";
-    b.setAttribute("aria-label", "Edit");
-    b.addEventListener("click", onClick); return b;
-  }
-  function confirmDelete(label) {
-    return (typeof window.confirm !== "function") || window.confirm("Delete “" + label + "”?");
+    if (next >= 0 && next < state.order.length) { dayCardIndex = 0; viewKey = state.order[next]; renderToday(); }
   }
 
   // ===========================================================================
-  // BANK EDITOR VIEW
+  // PRAYER CARDS SCREEN
   // ===========================================================================
-  var BANK_META = {
-    adoration: { label: "Adoration", kind: "adoration", term: true },
-    confession: { label: "Confession", kind: "confession", term: true },
-    thanksgiving: { label: "Thanksgiving", kind: "thanksgiving", term: false }
-  };
-  var editBank = null;   // {name, idx} currently being edited
-  var editReq = null;    // {name, idx} request being edited
-  var renameSubj = null; // subject name being renamed
-
-  // Build an add/edit form for an Adoration/Confession/Thanksgiving item.
-  function bankItemForm(name, meta, existing, onSave, onCancel) {
-    var form = el("form", "card add-form");
-    form.appendChild(el("h3", "add-title", (existing ? "Edit " : "Add to ") + meta.label));
-    var nameInput = textInput(meta.term ? "Word (e.g. Patient)" : "Theme (e.g. Adoption)");
-    form.appendChild(labeledInput(meta.term ? "Attribute / Sin" : "Theme", nameInput));
-    var defInput;
-    if (meta.term) { defInput = areaInput("Short definition"); form.appendChild(labeledInput("Definition", defInput)); }
-    var refInput = textInput("Reference (e.g. Psalm 23:1)");
-    form.appendChild(labeledInput("Scripture reference", refInput));
-    var textArea = areaInput("Verse text");
-    form.appendChild(labeledInput("Scripture text", textArea));
-    if (existing) {
-      nameInput.value = meta.term ? existing.term : existing.title;
-      if (meta.term) defInput.value = existing.definition || "";
-      var s0 = meta.term ? existing.scripture : (existing.scriptures && existing.scriptures[0]);
-      if (s0) { refInput.value = s0.ref || ""; textArea.value = s0.text || ""; }
-    }
-    var bar = el("div", "pc-btnbar");
-    var save = el("button", "btn btn-primary", existing ? "Save" : "Add"); save.type = "submit";
-    bar.appendChild(save);
-    if (existing) { var cancel = el("button", "btn", "Cancel"); cancel.type = "button"; cancel.addEventListener("click", onCancel); bar.appendChild(cancel); }
-    form.appendChild(bar);
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var nm = nameInput.value.trim(); if (!nm) { nameInput.focus(); return; }
-      var ref = refInput.value.trim(), txt = textArea.value.trim();
-      var scripture = (ref || txt) ? { ref: ref, text: txt } : null;
-      var item;
-      if (meta.term) item = { term: nm, definition: defInput.value.trim(), scripture: scripture };
-      else {
-        var rest = (existing && existing.scriptures) ? existing.scriptures.slice(1) : [];
-        item = { title: nm, scriptures: (scripture ? [scripture] : []).concat(rest) };
-      }
-      onSave(item);
-    });
-    return form;
-  }
-
-  function renderBank(name) {
-    if (name === "supplication") return renderSupplicationBank();
-    var meta = BANK_META[name];
-    bankContentEl.innerHTML = "";
-    bankContentEl.appendChild(el("p", "bank-intro",
-      meta.label + " bank · " + banks[name].length + " in rotation. Edit or delete any item; changes take effect on the next day's draw."));
-    bankContentEl.appendChild(bankItemForm(name, meta, null, function (item) { addBankItem(name, item); renderBank(name); }, null));
-    banks[name].forEach(function (item, idx) {
-      if (editBank && editBank.name === name && editBank.idx === idx) {
-        bankContentEl.appendChild(bankItemForm(name, meta, item,
-          function (updated) { editBankItem(name, idx, updated); editBank = null; renderBank(name); },
-          function () { editBank = null; renderBank(name); }));
-        return;
-      }
-      var row = el("div", "card item-row item-row--" + meta.kind);
-      var body = el("div", "item-body");
-      body.appendChild(el("p", "item-name", meta.term ? item.term : item.title));
-      if (meta.term && item.definition) body.appendChild(el("p", "item-def", item.definition));
-      var scrips = meta.term ? (item.scripture ? [item.scripture] : []) : (item.scriptures || []);
-      scrips.forEach(function (s) {
-        var sc = el("p", "item-scripture");
-        sc.appendChild(el("span", "item-ref", s.ref + " "));
-        sc.appendChild(document.createTextNode(s.text));
-        body.appendChild(sc);
-      });
-      row.appendChild(body);
-      var actions = el("div", "item-actions");
-      actions.appendChild(editBtn(function () { editBank = { name: name, idx: idx }; renderBank(name); }));
-      actions.appendChild(removeBtn(function () { if (confirmDelete(meta.term ? item.term : item.title)) { deleteBankItem(name, idx); renderBank(name); } }));
-      row.appendChild(actions);
-      bankContentEl.appendChild(row);
-    });
-  }
-
-  function renderSupplicationBank() {
-    bankContentEl.innerHTML = "";
-    bankContentEl.appendChild(el("p", "bank-intro",
-      "Supplication · " + subjects.length + " people. Each appears every day with one rotating request. Edit or delete any person or request. Same people as your Prayer Cards."));
-    var pform = el("form", "card add-form");
-    pform.appendChild(el("h3", "add-title", "Add a person / area"));
-    var pInput = textInput("Name (e.g. Small Group)");
-    pform.appendChild(labeledInput("Name", pInput));
-    var pbtn = el("button", "btn btn-primary", "Add person"); pbtn.type = "submit"; pform.appendChild(pbtn);
-    pform.addEventListener("submit", function (e) {
-      e.preventDefault();
-      if (addSubject(pInput.value.trim())) renderSupplicationBank(); else pInput.focus();
-    });
-    bankContentEl.appendChild(pform);
-    subjects.forEach(function (subj) {
-      var group = el("div", "card subject-group");
-      if (renameSubj === subj.name) {
-        var nin = textInput("Name"); nin.value = subj.name;
-        var sform = el("form", "add-request");
-        sform.appendChild(nin);
-        var sv = el("button", "btn btn-small btn-primary", "Save"); sv.type = "submit"; sform.appendChild(sv);
-        var scn = el("button", "btn btn-small", "Cancel"); scn.type = "button";
-        scn.addEventListener("click", function () { renameSubj = null; renderSupplicationBank(); }); sform.appendChild(scn);
-        sform.addEventListener("submit", function (e) {
-          e.preventDefault();
-          if (renameSubject(subj.name, nin.value)) { renameSubj = null; renderSupplicationBank(); } else nin.focus();
-        });
-        group.appendChild(sform);
-      } else {
-        var head = el("div", "subject-head");
-        head.appendChild(el("span", "supplication-subject", subj.name));
-        head.appendChild(el("span", "subject-count", subj.requests.length + " in rotation"));
-        var ha = el("div", "item-actions");
-        ha.appendChild(editBtn(function () { renameSubj = subj.name; editReq = null; renderSupplicationBank(); }));
-        ha.appendChild(removeBtn(function () { if (confirmDelete(subj.name)) { removeSubject(subj.name); renderSupplicationBank(); } }));
-        head.appendChild(ha);
-        group.appendChild(head);
-      }
-      var list = el("ul", "request-list");
-      subj.requests.forEach(function (req, idx) {
-        if (editReq && editReq.name === subj.name && editReq.idx === idx) {
-          var efli = el("li", "request-item");
-          var rin = textInput("Request"); rin.value = req;
-          var ef = el("form", "add-request"); ef.appendChild(rin);
-          var es = el("button", "btn btn-small btn-primary", "Save"); es.type = "submit"; ef.appendChild(es);
-          var ec = el("button", "btn btn-small", "Cancel"); ec.type = "button";
-          ec.addEventListener("click", function () { editReq = null; renderSupplicationBank(); }); ef.appendChild(ec);
-          ef.addEventListener("submit", function (e) {
-            e.preventDefault(); var v = rin.value.trim(); if (!v) return;
-            editRequest(subj.name, idx, v); editReq = null; renderSupplicationBank();
-          });
-          efli.appendChild(ef); list.appendChild(efli); return;
-        }
-        var li = el("li", "request-item");
-        li.appendChild(el("span", "request-text", req));
-        var ra = el("div", "item-actions");
-        ra.appendChild(editBtn(function () { editReq = { name: subj.name, idx: idx }; renameSubj = null; renderSupplicationBank(); }));
-        ra.appendChild(removeBtn(function () { removeRequestAt(subj.name, idx); renderSupplicationBank(); }));
-        li.appendChild(ra);
-        list.appendChild(li);
-      });
-      group.appendChild(list);
-      var rform = el("form", "add-request");
-      var rInput = textInput("Add a request for " + subj.name);
-      var rbtn = el("button", "btn btn-small", "Add"); rbtn.type = "submit";
-      rform.appendChild(rInput); rform.appendChild(rbtn);
-      rform.addEventListener("submit", function (e) {
-        e.preventDefault();
-        var v = rInput.value.trim(); if (!v) return;
-        addRequest(subj.name, v); renderSupplicationBank();
-      });
-      group.appendChild(rform);
-      bankContentEl.appendChild(group);
-    });
-  }
-
-  // ===========================================================================
-  // PRAYER CARDS VIEW  (flip through one card at a time, grouped by ACTS)
-  // ===========================================================================
-  var CARD_CAT = {
-    adoration: { label: "Adoration", kind: "adoration" },
-    confession: { label: "Confession", kind: "confession" },
-    thanksgiving: { label: "Thanksgiving", kind: "thanksgiving" },
-    supplication: { label: "Supplication", kind: "supplication" }
-  };
   var cardIndex = 0;
-  var scrEditing = false;
   var cardFilter = "all";
+  var scrEditing = false;
 
-  // Build the deck fresh each render so bank/subject edits are reflected.
   function buildDeck() {
     var deck = [];
     banks.adoration.forEach(function (item, i) { deck.push({ type: "adoration", index: i, item: item }); });
@@ -674,7 +500,7 @@
     return cardFilter === "all" ? deck : deck.filter(function (e) { return e.type === cardFilter; });
   }
   function cardKey(entry) {
-    if (entry.type === "supplication") return entry.subject.name; // back-compat key
+    if (entry.type === "supplication") return entry.subject.name;
     return entry.type + ":" + (entry.item.term || entry.item.title);
   }
   function removeCard(entry) {
@@ -683,177 +509,341 @@
     deleteBankItem(entry.type, entry.index);
   }
 
-  function buildScriptureDisplay(scriptures) {
-    var sec = el("section", "pc-section");
-    sec.appendChild(el("h3", "pc-label", "Pray this"));
-    scriptures.forEach(function (s) {
-      var fig = el("figure", "scripture pc-scripture");
-      if (s.ref) fig.appendChild(el("figcaption", "scripture-ref", s.ref));
-      if (s.text) fig.appendChild(el("blockquote", "scripture-text", s.text));
-      sec.appendChild(fig);
-    });
-    return sec;
-  }
-
-  // dated log used for "Answered prayers" (supplication) and "Reflections" (ACTS)
-  function buildLogSection(key, label, placeholder, emptyText) {
+  // A dated log block (Answered prayers / Reflections).
+  function logBlock(key, label, placeholder, emptyText) {
     var ex = extrasFor(key);
-    var sec = el("section", "pc-section");
-    sec.appendChild(el("h3", "pc-label", label));
-    var ul = el("ul", "pc-answers");
-    if (ex.answers.length === 0) ul.appendChild(el("li", "pc-empty", emptyText));
+    var blk = el("div", "blk");
+    blk.appendChild(el("div", "blk-label", label));
+    var ul = el("ul", "log-list");
+    if (ex.answers.length === 0) ul.appendChild(el("li", "log-empty", emptyText));
     ex.answers.forEach(function (a, idx) {
-      var li = el("li", "pc-answer");
-      li.appendChild(el("span", "pc-answer-date", a.date));
-      li.appendChild(el("span", "pc-answer-text", a.text));
-      li.appendChild(removeBtn(function () { ex.answers.splice(idx, 1); saveCards(); renderCards(); }));
+      var li = el("li", "log-item");
+      li.appendChild(el("span", "log-date", a.date));
+      li.appendChild(el("span", "log-text", a.text));
+      var x = el("button", "xbtn", "×"); x.type = "button"; x.setAttribute("aria-label", "Delete");
+      x.addEventListener("click", function () { ex.answers.splice(idx, 1); saveCards(); renderCards(); });
+      li.appendChild(x);
       ul.appendChild(li);
     });
-    sec.appendChild(ul);
-    var form = el("form", "add-request");
-    var inp = textInput(placeholder); var b = el("button", "btn btn-small", "Add"); b.type = "submit";
-    form.appendChild(inp); form.appendChild(b);
-    form.addEventListener("submit", function (e) {
-      e.preventDefault(); var v = inp.value.trim(); if (!v) return;
-      ex.answers.push({ text: v, date: todayShort(), ts: Date.now() }); saveCards(); renderCards();
+    blk.appendChild(ul);
+    var addRow = el("div", "inline-add");
+    var inp = el("input", "tinput"); inp.type = "text"; inp.placeholder = placeholder;
+    var btn = el("button", "acc-btn", "Add"); btn.type = "button";
+    function commit() { var v = inp.value.trim(); if (!v) return; ex.answers.push({ text: v, date: todayShort(), ts: Date.now() }); saveCards(); renderCards(); }
+    btn.addEventListener("click", commit);
+    inp.addEventListener("keydown", function (e) { if (e.key === "Enter") commit(); });
+    addRow.appendChild(inp); addRow.appendChild(btn);
+    blk.appendChild(addRow);
+    return blk;
+  }
+
+  function renderCardFilterChips() {
+    cardFilterChipsEl.innerHTML = "";
+    [["all", "All"], ["adoration", "Adoration"], ["confession", "Confession"],
+     ["thanksgiving", "Thanksgiving"], ["supplication", "Supplication"]].forEach(function (o) {
+      var chip = el("button", "chip" + (cardFilter === o[0] ? " is-active" : ""), o[1]); chip.type = "button";
+      chip.addEventListener("click", function () { cardFilter = o[0]; cardIndex = 0; scrEditing = false; renderCards(); });
+      cardFilterChipsEl.appendChild(chip);
     });
-    sec.appendChild(form);
-    return sec;
+  }
+
+  function renderCards() {
+    renderCardFilterChips();
+    cardsContentEl.innerHTML = "";
+    var deck = buildDeck();
+    if (deck.length === 0) {
+      cardsContentEl.appendChild(el("div", "empty-note", "No cards in this group yet — add some in Banks."));
+      return;
+    }
+    if (cardIndex < 0) cardIndex = 0;
+    if (cardIndex > deck.length - 1) cardIndex = deck.length - 1;
+    var entry = deck[cardIndex];
+
+    var card = el("div", "pcard");
+    var head = el("div", "deck-head");
+    head.appendChild(el("div", "deck-kind k-" + entry.type, CAT_LABEL[entry.type]));
+    var right = el("div", "item-actions");
+    right.appendChild(el("div", "deck-counter", (cardIndex + 1) + " / " + deck.length));
+    var del = el("button", "xbtn", "×"); del.type = "button"; del.setAttribute("aria-label", "Delete card");
+    del.addEventListener("click", function () {
+      var nm = entry.type === "supplication" ? entry.subject.name : (entry.item.term || entry.item.title);
+      if (confirmDelete(nm)) { removeCard(entry); scrEditing = false; renderCards(); }
+    });
+    right.appendChild(del);
+    head.appendChild(right);
+    card.appendChild(head);
+
+    var title = entry.type === "supplication" ? entry.subject.name : (entry.item.term || entry.item.title);
+    card.appendChild(el("div", "deck-title", title));
+
+    if (entry.type === "supplication") renderSupplicationCard(card, entry);
+    else renderActsCard(card, entry);
+    cardsContentEl.appendChild(card);
+
+    var nav = el("div", "deck-nav");
+    var prev = el("button", "round-btn", "‹"); prev.type = "button"; prev.setAttribute("aria-label", "Previous card");
+    var next = el("button", "round-btn", "›"); next.type = "button"; next.setAttribute("aria-label", "Next card");
+    var single = deck.length <= 1;
+    prev.disabled = single; next.disabled = single;
+    prev.addEventListener("click", function () { stepCard(-1); });
+    next.addEventListener("click", function () { stepCard(1); });
+    nav.appendChild(prev);
+    nav.appendChild(el("div", "swipe-hint", "swipe through your deck"));
+    nav.appendChild(next);
+    cardsContentEl.appendChild(nav);
   }
 
   function renderActsCard(card, entry) {
     var item = entry.item;
-    if (item.definition) {
-      var d = el("section", "pc-section");
-      d.appendChild(el("p", "pc-def", item.definition));
-      card.appendChild(d);
+    if (entry.type !== "thanksgiving" && item.definition) card.appendChild(el("div", "deck-def", item.definition));
+    var scrips = scripturesOf(item, entry.type);
+    if (scrips.length) {
+      var blk = el("div", "blk");
+      blk.appendChild(el("div", "blk-label", "Pray this"));
+      scrips.forEach(function (s) {
+        if (s.text) blk.appendChild(el("div", "blk-quote", "“" + s.text + "”"));
+        if (s.ref) blk.appendChild(el("div", "blk-ref", s.ref));
+      });
+      card.appendChild(blk);
     }
-    var scrips = entry.type === "thanksgiving" ? (item.scriptures || []) : (item.scripture ? [item.scripture] : []);
-    if (scrips.length) card.appendChild(buildScriptureDisplay(scrips));
-    card.appendChild(buildLogSection(cardKey(entry), "Reflections", "Add a reflection or prayer", "No reflections yet — jot what God shows you."));
-    var editBar = el("section", "pc-section");
-    var eb = el("button", "btn btn-small pc-edit", "Edit in " + CARD_CAT[entry.type].label + " bank"); eb.type = "button";
-    eb.addEventListener("click", function () { showView(entry.type); });
-    editBar.appendChild(eb);
-    card.appendChild(editBar);
+    card.appendChild(logBlock(cardKey(entry), "Reflections", "Add a reflection or prayer", "No reflections yet — jot what God shows you."));
+    var editBlk = el("div", "blk");
+    var eb = el("button", "acc-link", "Edit in " + CAT_LABEL[entry.type] + " bank"); eb.type = "button";
+    eb.style.marginTop = "0";
+    eb.addEventListener("click", function () { bankTab = entry.type; showView("banks"); });
+    editBlk.appendChild(eb);
+    card.appendChild(editBlk);
   }
 
   function renderSupplicationCard(card, entry) {
     var subj = entry.subject;
     var ex = extrasFor(subj.name);
 
-    var scrSec = el("section", "pc-section");
-    scrSec.appendChild(el("h3", "pc-label", "Pray this"));
+    var scrBlk = el("div", "blk");
+    scrBlk.appendChild(el("div", "blk-label", "Pray this"));
     if (scrEditing) {
-      var refIn = textInput("Reference (e.g. Colossians 1:9)");
-      var txtIn = areaInput("Verse text");
+      var refIn = el("input", "tinput"); refIn.type = "text"; refIn.placeholder = "Reference (e.g. Colossians 1:9)";
+      var txtIn = el("textarea", "tinput"); txtIn.placeholder = "Verse text"; txtIn.rows = 2;
       refIn.value = ex.scripture ? ex.scripture.ref : "";
       txtIn.value = ex.scripture ? ex.scripture.text : "";
-      scrSec.appendChild(labeledInput("Reference", refIn));
-      scrSec.appendChild(labeledInput("Verse", txtIn));
+      refIn.style.marginTop = "10px"; txtIn.style.marginTop = "8px";
+      scrBlk.appendChild(refIn); scrBlk.appendChild(txtIn);
       var bar = el("div", "pc-btnbar");
-      var save = el("button", "btn btn-primary btn-small", "Save"); save.type = "button";
+      var save = el("button", "acc-btn", "Save"); save.type = "button";
       save.addEventListener("click", function () {
         var r = refIn.value.trim(), t = txtIn.value.trim();
         ex.scripture = (r || t) ? { ref: r, text: t } : null;
         saveCards(); scrEditing = false; renderCards();
       });
-      var cancel = el("button", "btn btn-small", "Cancel"); cancel.type = "button";
+      var cancel = el("button", "ghost-btn", "Cancel"); cancel.type = "button"; cancel.style.padding = "0 16px";
       cancel.addEventListener("click", function () { scrEditing = false; renderCards(); });
-      bar.appendChild(save); bar.appendChild(cancel); scrSec.appendChild(bar);
+      bar.appendChild(save); bar.appendChild(cancel); scrBlk.appendChild(bar);
     } else {
       if (ex.scripture && (ex.scripture.ref || ex.scripture.text)) {
-        var fig = el("figure", "scripture pc-scripture");
-        if (ex.scripture.ref) fig.appendChild(el("figcaption", "scripture-ref", ex.scripture.ref));
-        if (ex.scripture.text) fig.appendChild(el("blockquote", "scripture-text", ex.scripture.text));
-        scrSec.appendChild(fig);
+        if (ex.scripture.text) scrBlk.appendChild(el("div", "blk-quote", "“" + ex.scripture.text + "”"));
+        if (ex.scripture.ref) scrBlk.appendChild(el("div", "blk-ref", ex.scripture.ref));
       } else {
-        scrSec.appendChild(el("p", "pc-empty", "No verse yet — choose a Scripture to pray over " + subj.name + "."));
+        scrBlk.appendChild(el("div", "log-empty", "No verse yet — choose a Scripture to pray over " + subj.name + "."));
       }
-      var edit = el("button", "btn btn-small pc-edit", ex.scripture ? "Edit verse" : "Add a verse");
-      edit.type = "button";
+      var edit = el("button", "acc-link", ex.scripture ? "Edit verse" : "Add a verse"); edit.type = "button";
       edit.addEventListener("click", function () { scrEditing = true; renderCards(); });
-      scrSec.appendChild(edit);
+      scrBlk.appendChild(edit);
     }
-    card.appendChild(scrSec);
+    card.appendChild(scrBlk);
 
-    var reqSec = el("section", "pc-section");
-    reqSec.appendChild(el("h3", "pc-label", "Pray for"));
-    var ul = el("ul", "pc-requests");
+    var reqBlk = el("div", "blk");
+    reqBlk.appendChild(el("div", "blk-label", "Pray for"));
+    var ul = el("ul", "req-list");
     subj.requests.forEach(function (req, idx) {
-      var li = el("li", "pc-request");
-      li.appendChild(el("span", "pc-bullet", "•"));
-      li.appendChild(el("span", "request-text", req));
-      li.appendChild(removeBtn(function () { removeRequestAt(subj.name, idx); renderCards(); }));
+      var li = el("li", "req-item");
+      li.appendChild(el("span", "req-bullet", "•"));
+      li.appendChild(el("span", "req-text", req));
+      var x = el("button", "xbtn", "×"); x.type = "button"; x.setAttribute("aria-label", "Delete");
+      x.addEventListener("click", function () { removeRequestAt(subj.name, idx); renderCards(); });
+      li.appendChild(x);
       ul.appendChild(li);
     });
-    if (subj.requests.length === 0) ul.appendChild(el("li", "pc-empty", "No requests yet — add one below."));
-    reqSec.appendChild(ul);
-    var rform = el("form", "add-request");
-    var rin = textInput("Add a request"); var rb = el("button", "btn btn-small", "Add"); rb.type = "submit";
-    rform.appendChild(rin); rform.appendChild(rb);
-    rform.addEventListener("submit", function (e) {
-      e.preventDefault(); var v = rin.value.trim(); if (!v) return;
-      addRequest(subj.name, v); renderCards();
-    });
-    reqSec.appendChild(rform);
-    card.appendChild(reqSec);
+    if (subj.requests.length === 0) ul.appendChild(el("li", "log-empty", "No requests yet — add one below."));
+    reqBlk.appendChild(ul);
+    var addRow = el("div", "inline-add");
+    var rin = el("input", "tinput"); rin.type = "text"; rin.placeholder = "Add a request";
+    var rb = el("button", "acc-btn", "Add"); rb.type = "button";
+    function commitReq() { var v = rin.value.trim(); if (!v) return; addRequest(subj.name, v); renderCards(); }
+    rb.addEventListener("click", commitReq);
+    rin.addEventListener("keydown", function (e) { if (e.key === "Enter") commitReq(); });
+    addRow.appendChild(rin); addRow.appendChild(rb);
+    reqBlk.appendChild(addRow);
+    card.appendChild(reqBlk);
 
-    card.appendChild(buildLogSection(subj.name, "Answered prayers", "Log an answered prayer", "None logged yet — record how God answers to build faith."));
-  }
-
-  function renderCards() {
-    var deck = buildDeck();
-    if (cardIndex < 0) cardIndex = 0;
-    if (cardIndex > deck.length - 1) cardIndex = Math.max(0, deck.length - 1);
-    cardsContentEl.innerHTML = "";
-
-    if (deck.length === 0) {
-      cardCounterEl.textContent = "No cards";
-      prevCardBtn.disabled = true; nextCardBtn.disabled = true;
-      cardsContentEl.appendChild(el("p", "bank-intro", "No cards to show. Add one from the Settings tab."));
-      return;
-    }
-
-    var entry = deck[cardIndex];
-    var cat = CARD_CAT[entry.type];
-    cardCounterEl.textContent = (cardIndex + 1) + " / " + deck.length;
-    // deck loops, so arrows stay active unless there's only one card
-    var single = deck.length <= 1;
-    prevCardBtn.disabled = single;
-    nextCardBtn.disabled = single;
-
-    var card = el("article", "prayer-card prayer-card--" + cat.kind);
-    var head = el("header", "pc-head");
-    head.appendChild(el("span", "pc-chip pc-chip--" + cat.kind, cat.label));
-    head.appendChild(el("h2", "pc-title", entry.type === "supplication" ? entry.subject.name : (entry.item.term || entry.item.title)));
-    head.appendChild(removeBtn(function () {
-      if (confirmDelete(entry.type === "supplication" ? entry.subject.name : (entry.item.term || entry.item.title))) { removeCard(entry); scrEditing = false; renderCards(); }
-    }));
-    card.appendChild(head);
-
-    var body = el("div", "pc-body");
-    if (entry.type === "supplication") renderSupplicationCard(body, entry);
-    else renderActsCard(body, entry);
-    card.appendChild(body);
-
-    cardsContentEl.appendChild(card);
+    card.appendChild(logBlock(subj.name, "Answered prayers", "Log an answered prayer", "None logged yet — record how God answers."));
   }
 
   function stepCard(delta) {
     var len = buildDeck().length;
     if (len === 0) return;
-    cardIndex = ((cardIndex + delta) % len + len) % len; // wrap around the deck
+    cardIndex = ((cardIndex + delta) % len + len) % len;
     scrEditing = false; renderCards();
   }
-  prevCardBtn.addEventListener("click", function () { stepCard(-1); });
-  nextCardBtn.addEventListener("click", function () { stepCard(1); });
-  if (cardFilterEl) cardFilterEl.addEventListener("change", function () {
-    cardFilter = cardFilterEl.value; cardIndex = 0; scrEditing = false; renderCards();
-  });
 
   // ===========================================================================
-  // ANSWERED PRAYERS VIEW  (aggregated from Supplication card logs)
+  // BANKS SCREEN
+  // ===========================================================================
+  var bankTab = "adoration";
+  var editBank = null;   // { name, idx }
+  var renameSubj = null; // subject name
+  var openReqSubj = null; // subject name whose add-request input is open
+  var BANK_META = {
+    adoration: { label: "Adoration", term: true, termPh: "Attribute (e.g. Patient)" },
+    confession: { label: "Confession", term: true, termPh: "Sin (e.g. Envy)" },
+    thanksgiving: { label: "Thanksgiving", term: false, termPh: "Theme (e.g. Adoption)" }
+  };
+
+  function renderBankChips() {
+    bankTabChipsEl.innerHTML = "";
+    [["adoration", "Adoration"], ["confession", "Confession"], ["thanksgiving", "Thanksgiving"], ["supplication", "Supplication"]].forEach(function (o) {
+      var chip = el("button", "chip" + (bankTab === o[0] ? " is-active" : ""), o[1]); chip.type = "button";
+      chip.addEventListener("click", function () { bankTab = o[0]; editBank = null; renameSubj = null; openReqSubj = null; renderBanks(); });
+      bankTabChipsEl.appendChild(chip);
+    });
+  }
+
+  function bankItemForm(meta, existing, onSave, onCancel) {
+    var form = el("form", "form-card");
+    form.appendChild(el("div", "form-label", (existing ? "Edit " : "Add to ") + meta.label));
+    var termIn = el("input", "tinput"); termIn.type = "text"; termIn.placeholder = meta.termPh;
+    form.appendChild(termIn);
+    var defIn = null;
+    if (meta.term) { defIn = el("input", "tinput"); defIn.type = "text"; defIn.placeholder = "Short definition"; form.appendChild(defIn); }
+    var refIn = el("input", "tinput"); refIn.type = "text"; refIn.placeholder = "Scripture reference (e.g. Psalm 23:1)"; form.appendChild(refIn);
+    var textIn = el("input", "tinput"); textIn.type = "text"; textIn.placeholder = "Verse text"; form.appendChild(textIn);
+    if (existing) {
+      termIn.value = meta.term ? existing.term : existing.title;
+      if (meta.term) defIn.value = existing.definition || "";
+      var s0 = meta.term ? existing.scripture : (existing.scriptures && existing.scriptures[0]);
+      if (s0) { refIn.value = s0.ref || ""; textIn.value = s0.text || ""; }
+    }
+    var submit = el("button", "acc-btn block", existing ? "Save changes" : "Add to bank"); submit.type = "submit";
+    form.appendChild(submit);
+    if (existing) {
+      var cancel = el("button", "ghost-btn", "Cancel"); cancel.type = "button";
+      cancel.addEventListener("click", onCancel); form.appendChild(cancel);
+    }
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var nm = termIn.value.trim(); if (!nm) { termIn.focus(); return; }
+      var ref = refIn.value.trim(), txt = textIn.value.trim();
+      var scripture = (ref || txt) ? { ref: ref, text: txt } : null;
+      var item;
+      if (meta.term) item = { term: nm, definition: defIn.value.trim(), scripture: scripture };
+      else {
+        var rest = (existing && existing.scriptures) ? existing.scriptures.slice(1) : [];
+        item = { title: nm, scriptures: (scripture ? [scripture] : []).concat(rest) };
+      }
+      onSave(item);
+    });
+    return form;
+  }
+
+  function renderBanks() {
+    renderBankChips();
+    bankContentEl.innerHTML = "";
+    if (bankTab === "supplication") { renderSupplicationBank(); return; }
+    var meta = BANK_META[bankTab];
+    bankContentEl.appendChild(bankItemForm(meta, null, function (item) { addBankItem(bankTab, item); renderBanks(); }, null));
+    banks[bankTab].forEach(function (item, idx) {
+      if (editBank && editBank.name === bankTab && editBank.idx === idx) {
+        bankContentEl.appendChild(bankItemForm(meta, item,
+          function (updated) { editBankItem(bankTab, idx, updated); editBank = null; renderBanks(); },
+          function () { editBank = null; renderBanks(); }));
+        return;
+      }
+      var cardEl = el("div", "item-card");
+      var top = el("div", "item-top");
+      top.appendChild(el("div", "item-title", meta.term ? item.term : item.title));
+      var actions = el("div", "item-actions");
+      var edit = el("button", "link-btn", "Edit"); edit.type = "button";
+      edit.addEventListener("click", function () { editBank = { name: bankTab, idx: idx }; renderBanks(); });
+      var x = el("button", "xbtn", "×"); x.type = "button"; x.setAttribute("aria-label", "Delete");
+      x.addEventListener("click", function () { if (confirmDelete(meta.term ? item.term : item.title)) { deleteBankItem(bankTab, idx); renderBanks(); } });
+      actions.appendChild(edit); actions.appendChild(x);
+      top.appendChild(actions);
+      cardEl.appendChild(top);
+      if (meta.term && item.definition) cardEl.appendChild(el("div", "item-def", item.definition));
+      var scrips = meta.term ? (item.scripture ? [item.scripture] : []) : (item.scriptures || []);
+      scrips.forEach(function (s) {
+        if (s.text) cardEl.appendChild(el("div", "item-quote", "“" + s.text + "”"));
+        if (s.ref) cardEl.appendChild(el("div", "item-ref", s.ref));
+      });
+      bankContentEl.appendChild(cardEl);
+    });
+  }
+
+  function renderSupplicationBank() {
+    var addWrap = el("div", "add-row on-bg");
+    var pIn = el("input", "tinput"); pIn.type = "text"; pIn.placeholder = "Add a person or area";
+    var pBtn = el("button", "acc-btn", "Add"); pBtn.type = "button";
+    function addPerson() { if (addSubject(pIn.value.trim())) { renderBanks(); } else pIn.focus(); }
+    pBtn.addEventListener("click", addPerson);
+    pIn.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addPerson(); } });
+    addWrap.appendChild(pIn); addWrap.appendChild(pBtn);
+    bankContentEl.appendChild(addWrap);
+
+    subjects.forEach(function (subj) {
+      var cardEl = el("div", "person-card");
+      var top = el("div", "person-top");
+      if (renameSubj === subj.name) {
+        var nin = el("input", "tinput"); nin.type = "text"; nin.value = subj.name;
+        var save = el("button", "acc-btn sm", "Save"); save.type = "button";
+        function commitName() { if (renameSubject(subj.name, nin.value)) { renameSubj = null; renderBanks(); } else nin.focus(); }
+        save.addEventListener("click", commitName);
+        nin.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); commitName(); } });
+        var wrap = el("div", "add-row"); wrap.style.flex = "1"; wrap.appendChild(nin); wrap.appendChild(save);
+        top.appendChild(wrap);
+      } else {
+        top.appendChild(el("div", "person-name", subj.name));
+        var actions = el("div", "item-actions");
+        actions.appendChild(el("span", "person-count", subj.requests.length + " in rotation"));
+        var edit = el("button", "link-btn", "Rename"); edit.type = "button";
+        edit.addEventListener("click", function () { renameSubj = subj.name; openReqSubj = null; renderBanks(); });
+        var x = el("button", "xbtn", "×"); x.type = "button"; x.setAttribute("aria-label", "Delete");
+        x.addEventListener("click", function () { if (confirmDelete(subj.name)) { removeSubject(subj.name); renderBanks(); } });
+        actions.appendChild(edit); actions.appendChild(x);
+        top.appendChild(actions);
+      }
+      cardEl.appendChild(top);
+
+      var reqs = el("div", "person-reqs");
+      subj.requests.forEach(function (req, idx) {
+        var r = el("div", "person-req");
+        r.appendChild(el("span", "req-bullet", "•"));
+        r.appendChild(el("span", "req-text", req));
+        var x = el("button", "xbtn", "×"); x.type = "button"; x.setAttribute("aria-label", "Delete");
+        x.addEventListener("click", function () { removeRequestAt(subj.name, idx); renderBanks(); });
+        r.appendChild(x);
+        reqs.appendChild(r);
+      });
+      cardEl.appendChild(reqs);
+
+      if (openReqSubj === subj.name) {
+        var addReq = el("div", "add-row"); addReq.style.marginTop = "10px";
+        var rin = el("input", "tinput"); rin.type = "text"; rin.placeholder = "New request";
+        var rb = el("button", "acc-btn sm", "Add"); rb.type = "button";
+        function commitReq() { var v = rin.value.trim(); if (!v) return; addRequest(subj.name, v); renderBanks(); }
+        rb.addEventListener("click", commitReq);
+        rin.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); commitReq(); } });
+        addReq.appendChild(rin); addReq.appendChild(rb);
+        cardEl.appendChild(addReq);
+      } else {
+        var openBtn = el("button", "acc-link", "+ Add a request"); openBtn.type = "button";
+        openBtn.addEventListener("click", function () { openReqSubj = subj.name; renameSubj = null; renderBanks(); });
+        cardEl.appendChild(openBtn);
+      }
+      bankContentEl.appendChild(cardEl);
+    });
+  }
+
+  // ===========================================================================
+  // ANSWERED SCREEN
   // ===========================================================================
   function renderAnswered() {
     answeredContentEl.innerHTML = "";
@@ -866,181 +856,33 @@
       });
     });
     entries.sort(function (a, b) { return b.ts - a.ts; });
-
-    answeredContentEl.appendChild(el("p", "bank-intro",
-      "Answers logged on your Supplication prayer cards" + (entries.length ? " · " + entries.length + " recorded" : "") + "."));
-
     if (entries.length === 0) {
-      var empty = el("div", "card");
-      empty.appendChild(el("p", "pc-empty", "No answered prayers yet. On a Supplication prayer card, log how God answers — they'll gather here as a timeline of His faithfulness."));
-      answeredContentEl.appendChild(empty);
+      answeredContentEl.appendChild(el("div", "ans-empty",
+        "Nothing logged yet. On a Supplication prayer card, record how God answers — it gathers here as a timeline of His faithfulness."));
       return;
     }
-
     entries.forEach(function (en) {
-      var row = el("div", "card answered-item");
-      var meta = el("div", "answered-meta");
-      meta.appendChild(el("span", "answered-who", en.name));
-      meta.appendChild(el("span", "answered-date", en.date));
-      row.appendChild(meta);
-      row.appendChild(el("p", "answered-text", en.text));
-      row.appendChild(removeBtn(function () {
+      var row = el("div", "ans-row");
+      var top = el("div", "ans-top");
+      top.appendChild(el("div", "ans-name", en.name));
+      var right = el("div", "item-actions");
+      right.appendChild(el("div", "ans-date", en.date));
+      var x = el("button", "xbtn", "×"); x.type = "button"; x.setAttribute("aria-label", "Delete");
+      x.addEventListener("click", function () {
         var ex = cards.extras[en.name];
         if (ex && ex.answers) { ex.answers.splice(en.idx, 1); saveCards(); renderAnswered(); }
-      }));
+      });
+      right.appendChild(x);
+      top.appendChild(right);
+      row.appendChild(top);
+      row.appendChild(el("div", "ans-text", en.text));
       answeredContentEl.appendChild(row);
     });
   }
 
-
   // ===========================================================================
-  // EXPORT (full editable content + card extras)
+  // MORE SCREEN
   // ===========================================================================
-  function exportCard() {
-    var card = el("div", "card export-card");
-    card.appendChild(el("h3", "add-title", "Back up / export your plan"));
-    card.appendChild(el("p", "bank-intro", "Your edits are saved on this device. Copy this to back it up, move it to another device, or send to Claude to bake into the app."));
-    var ta = el("textarea", "notes-input"); ta.readOnly = true; ta.rows = 4;
-    ta.value = JSON.stringify({ content: content, cards: cards.extras }, null, 2);
-    card.appendChild(ta);
-    var btn = el("button", "btn btn-primary", "Copy"); btn.type = "button";
-    btn.addEventListener("click", function () {
-      ta.select();
-      var done = function () { btn.textContent = "Copied ✓"; setTimeout(function () { btn.textContent = "Copy"; }, 1500); };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(ta.value).then(done, function () { try { document.execCommand("copy"); done(); } catch (e) {} });
-      } else { try { document.execCommand("copy"); done(); } catch (e) {} }
-    });
-    card.appendChild(btn);
-    return card;
-  }
-
-  // ===========================================================================
-  // VIEW SWITCHING
-  // ===========================================================================
-  function showView(name) {
-    var isDay = name === "day";
-    var isAttr = name === "attributes";
-    var isCards = name === "cards";
-    var isAnswered = name === "answered";
-    var isSettings = name === "settings";
-    var isBank = !isDay && !isAttr && !isCards && !isAnswered && !isSettings;
-    dayView.classList.toggle("is-hidden", !isDay);
-    attributesView.classList.toggle("is-hidden", !isAttr);
-    cardsView.classList.toggle("is-hidden", !isCards);
-    answeredView.classList.toggle("is-hidden", !isAnswered);
-    settingsView.classList.toggle("is-hidden", !isSettings);
-    bankView.classList.toggle("is-hidden", !isBank);
-    viewTabs.forEach(function (tab) { tab.classList.toggle("is-active", tab.dataset.view === name); });
-    if (isBank) renderBank(name);
-    if (isCards) { scrEditing = false; renderCards(); }
-    if (isAnswered) renderAnswered();
-    if (isSettings) renderSettings();
-    window.scrollTo({ top: 0 });
-  }
-  viewTabs.forEach(function (tab) { tab.addEventListener("click", function () { showView(tab.dataset.view); }); });
-
-  // ---- attributes reference -------------------------------------------------
-  PRAYER_PLAN.attributes.forEach(function (attr) {
-    var row = el("div", "attribute");
-    row.appendChild(el("span", "attribute-name", attr.name));
-    row.appendChild(el("span", "attribute-def", attr.definition));
-    attributesEl.appendChild(row);
-  });
-
-  // ---- swipe navigation -----------------------------------------------------
-  var touchX = null, touchY = null;
-  document.addEventListener("touchstart", function (e) {
-    touchX = e.changedTouches[0].clientX; touchY = e.changedTouches[0].clientY;
-  }, { passive: true });
-  document.addEventListener("touchend", function (e) {
-    if (touchX === null) return;
-    var dx = e.changedTouches[0].clientX - touchX;
-    var dy = e.changedTouches[0].clientY - touchY;
-    var horizontal = Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5;
-    if (horizontal) {
-      if (!dayView.classList.contains("is-hidden")) {
-        if (todayMode === "cards") stepDayCard(dx < 0 ? 1 : -1);
-        else step(dx < 0 ? 1 : -1);
-      } else if (!cardsView.classList.contains("is-hidden")) stepCard(dx < 0 ? 1 : -1);
-    }
-    touchX = touchY = null;
-  }, { passive: true });
-
-  // ===========================================================================
-  // SETTINGS VIEW
-  // ===========================================================================
-  var THEME_KEY = "prayerPlan.theme";
-  var STYLE_KEY = "prayerPlan.style";
-  function currentThemeChoice() {
-    try { var t = localStorage.getItem(THEME_KEY); if (t === "light" || t === "dark") return t; } catch (e) {}
-    return "system";
-  }
-  function applyThemeChoice(choice) {
-    var root = document.documentElement;
-    if (choice === "light" || choice === "dark") {
-      root.setAttribute("data-theme", choice);
-      try { localStorage.setItem(THEME_KEY, choice); } catch (e) {}
-    } else {
-      if (root.removeAttribute) root.removeAttribute("data-theme");
-      try { localStorage.removeItem(THEME_KEY); } catch (e) {}
-    }
-  }
-  var STYLES = ["ancient", "celestial", "liturgical", "scroll"];
-  function currentStyleChoice() {
-    try { var s = localStorage.getItem(STYLE_KEY); if (STYLES.indexOf(s) > -1) return s; } catch (e) {}
-    return "modern";
-  }
-  function applyStyleChoice(choice) {
-    var root = document.documentElement;
-    if (STYLES.indexOf(choice) > -1) {
-      root.setAttribute("data-style", choice);
-      try { localStorage.setItem(STYLE_KEY, choice); } catch (e) {}
-    } else {
-      if (root.removeAttribute) root.removeAttribute("data-style");
-      try { localStorage.removeItem(STYLE_KEY); } catch (e) {}
-    }
-    if (choice === "liturgical") root.setAttribute("data-season", liturgicalSeason(new Date()));
-    else if (root.removeAttribute) root.removeAttribute("data-season");
-  }
-
-  // ---- liturgical calendar (Western/Roman) ----------------------------------
-  function ymd(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
-  function addDays(d, n) { var r = new Date(d); r.setDate(r.getDate() + n); return ymd(r); }
-  function gregorianEaster(y) { // Anonymous Gregorian (Meeus/Jones/Butcher)
-    var a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4,
-      f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3),
-      h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4,
-      l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451),
-      month = Math.floor((h + l - 7 * m + 114) / 31), day = ((h + l - 7 * m + 114) % 31) + 1;
-    return new Date(y, month - 1, day);
-  }
-  function adventSunday(y) { // first Sunday of Advent: Sunday nearest Nov 30
-    var d = new Date(y, 10, 30), dow = d.getDay();
-    return addDays(d, dow <= 3 ? -dow : 7 - dow);
-  }
-  function liturgicalSeason(t) {
-    var day = ymd(t), Y = day.getFullYear();
-    var easter = ymd(gregorianEaster(Y));
-    var ashWed = addDays(easter, -46);
-    var pentecost = addDays(easter, 49);
-    var advent1 = adventSunday(Y);
-    var christmas = new Date(Y, 11, 25);
-    var epiphany = new Date(Y, 0, 6);
-    if (day <= epiphany) return "christmas";           // Jan 1–6 (Christmas carries over)
-    if (day >= ashWed && day < easter) return "lent";
-    if (day.getTime() === pentecost.getTime()) return "pentecost";
-    if (day >= easter && day < pentecost) return "easter";
-    if (day >= advent1 && day < christmas) return "advent";
-    if (day >= christmas) return "christmas";           // Dec 25–31
-    return "ordinary";
-  }
-  function seasonLabel(s) {
-    return { advent: "Advent", christmas: "Christmas", lent: "Lent", easter: "Easter",
-      pentecost: "Pentecost", ordinary: "Ordinary Time" }[s] || "Ordinary Time";
-  }
-
-  // Replace the current plan with an exported one (from the Back up / export box).
   function importPlan(text) {
     var data;
     try { data = JSON.parse(text); } catch (e) { return { ok: false, msg: "That isn't valid JSON." }; }
@@ -1063,85 +905,155 @@
     delete state.history[todayKey];
     saveState();
     todayKey = ensureToday(); viewKey = todayKey; dayCardIndex = 0;
-    return { ok: true, msg: "Imported. Your plan has been loaded — check the Today and bank tabs." };
+    return { ok: true, msg: "Imported — your plan was loaded." };
   }
+  function exportText() { return JSON.stringify({ content: content, cards: cards.extras }, null, 1); }
 
-  function renderSettings() {
-    settingsContentEl.innerHTML = "";
+  var openAttr = -1;
+  function renderMore() {
+    moreContentEl.innerHTML = "";
 
-    // Appearance — theme
-    var appear = el("div", "card settings-card");
-    appear.appendChild(el("h3", "add-title", "Appearance"));
-    var row = el("div", "setting-row");
-    row.appendChild(el("span", "setting-label", "Theme"));
-    var seg = el("div", "seg");
-    [["system", "System"], ["light", "Light"], ["dark", "Dark"]].forEach(function (o) {
-      var b = el("button", "seg-btn" + (currentThemeChoice() === o[0] ? " is-active" : ""), o[1]);
-      b.type = "button";
-      b.addEventListener("click", function () { applyThemeChoice(o[0]); renderSettings(); });
-      seg.appendChild(b);
+    // (account / sync box is a static element above #more-content, filled by sync.js)
+
+    // Theme
+    var themeSec = el("div", "more-section");
+    themeSec.appendChild(el("div", "more-label", "Theme"));
+    var swRow = el("div", "swatch-row");
+    var cur = currentStyle();
+    STYLES.forEach(function (k) {
+      var sw = el("button", "swatch" + (cur === k ? " is-active" : "")); sw.type = "button";
+      sw.style.background = STYLE_SWATCH[k].bg; sw.style.color = STYLE_SWATCH[k].ink;
+      sw.appendChild(el("div", "swatch-aa", "Aa"));
+      sw.appendChild(el("div", "swatch-name", STYLE_LABEL[k]));
+      sw.addEventListener("click", function () { applyStyle(k); renderMore(); });
+      swRow.appendChild(sw);
     });
-    row.appendChild(seg);
-    appear.appendChild(row);
+    themeSec.appendChild(swRow);
+    moreContentEl.appendChild(themeSec);
 
-    var styleRow = el("div", "setting-row");
-    styleRow.appendChild(el("span", "setting-label", "Style"));
-    var styleSel = el("select", "filter-select");
-    [["modern", "Modern"], ["ancient", "Ancient"], ["scroll", "Scroll"], ["celestial", "Celestial Night"], ["liturgical", "Liturgical Seasons"]].forEach(function (o) {
-      var opt = document.createElement("option");
-      opt.value = o[0]; opt.textContent = o[1];
-      if (currentStyleChoice() === o[0]) opt.selected = true;
-      styleSel.appendChild(opt);
+    // Attributes of God
+    var attrSec = el("div", "more-section");
+    attrSec.appendChild(el("div", "more-label", "Attributes of God"));
+    attrSec.appendChild(el("div", "more-note", "A reference for Adoration — tap any to read."));
+    var list = el("div", "attr-list");
+    PRAYER_PLAN.attributes.forEach(function (attr, i) {
+      var row = el("div", "attr-row");
+      var top = el("div", "attr-top");
+      top.appendChild(el("div", "attr-name", attr.name));
+      top.appendChild(el("div", "attr-chev", openAttr === i ? "–" : "+"));
+      row.appendChild(top);
+      if (openAttr === i) row.appendChild(el("div", "attr-def", attr.definition));
+      row.addEventListener("click", function () { openAttr = openAttr === i ? -1 : i; renderMore(); });
+      list.appendChild(row);
     });
-    styleSel.addEventListener("change", function () { applyStyleChoice(styleSel.value); renderSettings(); });
-    styleRow.appendChild(styleSel);
-    appear.appendChild(styleRow);
+    attrSec.appendChild(list);
+    moreContentEl.appendChild(attrSec);
 
-    var hint = "“System” follows your device's light/dark setting. Ancient is warm parchment; Scroll adds parchment texture with a cursive hand; Celestial Night is starlit; Liturgical Seasons follows the church calendar.";
-    if (currentStyleChoice() === "liturgical") hint = "Liturgical color for today: " + seasonLabel(liturgicalSeason(new Date())) + ". The palette changes with the church calendar.";
-    appear.appendChild(el("p", "bank-intro", hint));
-    settingsContentEl.appendChild(appear);
-
-    // Add a prayer card
-    var form = el("form", "card add-form");
-    form.appendChild(el("h3", "add-title", "Add a prayer card"));
-    form.appendChild(el("p", "bank-intro", "Adds a person or topic to your Supplication list and Prayer Cards."));
-    var nin = textInput("Name or topic (e.g. Neighbor, Work)");
-    form.appendChild(labeledInput("Name / topic", nin));
-    var btn = el("button", "btn btn-primary", "Add card"); btn.type = "submit"; form.appendChild(btn);
-    var note = el("p", "settings-note");
-    form.appendChild(note);
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var v = nin.value.trim();
-      if (addSubject(v)) { nin.value = ""; note.textContent = "Added “" + v + "”. Find it in Prayer Cards & Supplication."; }
-      else { nin.focus(); note.textContent = v ? "“" + v + "” already exists." : ""; }
+    // Back up / move devices
+    var backSec = el("div", "more-section");
+    backSec.appendChild(el("div", "more-label", "Back up / move devices"));
+    backSec.appendChild(el("div", "more-note", "Copy this to back up your plan, or paste a backup below and import it."));
+    var ta = el("textarea", "backup-area"); ta.rows = 4; ta.value = exportText();
+    backSec.appendChild(ta);
+    var btns = el("div", "backup-btns");
+    var copy = el("button", "acc-btn", "Copy"); copy.type = "button";
+    copy.addEventListener("click", function () {
+      ta.select();
+      var done = function () { copy.textContent = "Copied ✓"; setTimeout(function () { copy.textContent = "Copy"; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(done, function () { try { document.execCommand("copy"); done(); } catch (e) {} });
+      else { try { document.execCommand("copy"); done(); } catch (e) {} }
     });
-    settingsContentEl.appendChild(form);
-
-    // Import / restore a plan
-    var imp = el("form", "card import-card");
-    imp.appendChild(el("h3", "add-title", "Import / restore a plan"));
-    imp.appendChild(el("p", "bank-intro", "Paste a plan you exported (from a Back up / export box) to load it here. This replaces your current banks, people, and prayer cards."));
-    var ita = el("textarea", "notes-input"); ita.rows = 4; ita.placeholder = "Paste exported plan JSON here…";
-    imp.appendChild(ita);
-    var ibtn = el("button", "btn btn-primary", "Import plan"); ibtn.type = "submit"; imp.appendChild(ibtn);
-    var inote = el("p", "settings-note"); imp.appendChild(inote);
-    imp.addEventListener("submit", function (e) {
-      e.preventDefault();
-      if (!ita.value.trim()) { ita.focus(); return; }
+    var imp = el("button", "ghost-btn", "Import"); imp.type = "button";
+    var msg = el("div", "backup-msg");
+    imp.addEventListener("click", function () {
+      if (!ta.value.trim()) { ta.focus(); return; }
       if (typeof window.confirm === "function" && !window.confirm("Import this plan? It replaces your current banks, people, and prayer cards.")) return;
-      var r = importPlan(ita.value);
-      inote.textContent = r.msg;
-      if (r.ok) { ita.value = ""; }
+      var r = importPlan(ta.value);
+      msg.textContent = r.msg;
+      msg.className = "backup-msg " + (r.ok ? "ok" : "err");
+      if (r.ok) { renderToday(); }
     });
-    settingsContentEl.appendChild(imp);
+    btns.appendChild(copy); btns.appendChild(imp);
+    backSec.appendChild(btns);
+    backSec.appendChild(msg);
+    moreContentEl.appendChild(backSec);
 
-    // Back up / export (also available on each bank tab)
-    settingsContentEl.appendChild(exportCard());
+    // About + reset
+    var aboutSec = el("div", "more-section");
+    aboutSec.appendChild(el("div", "more-label", "About"));
+    var about = el("div", "about-text");
+    about.appendChild(document.createTextNode("Prayer Plan draws a fresh ACTS set from your banks each day. Everything you add is saved on this device and syncs to your account when signed in. Inspired by Paul Miller's "));
+    var italic = el("span", null, "A Praying Life"); italic.style.fontStyle = "italic";
+    about.appendChild(italic);
+    about.appendChild(document.createTextNode("."));
+    aboutSec.appendChild(about);
+    var reset = el("button", "reset-link", "Reset this device"); reset.type = "button";
+    reset.addEventListener("click", function () {
+      if (typeof window.confirm === "function" &&
+        !window.confirm("Reset erases your banks, people, cards, and history on this device. If you're signed in, your cloud copy is untouched. Continue?")) return;
+      try {
+        localStorage.removeItem(CONTENT_KEY); localStorage.removeItem(CARDS_KEY);
+        localStorage.removeItem(STATE_KEY); localStorage.removeItem(CUSTOM_KEY);
+      } catch (e) {}
+      window.location.reload();
+    });
+    aboutSec.appendChild(reset);
+    moreContentEl.appendChild(aboutSec);
   }
+
+  // ===========================================================================
+  // VIEW SWITCHING
+  // ===========================================================================
+  var currentView = "today";
+  function showView(name) {
+    currentView = name;
+    screens.forEach(function (s) { s.classList.toggle("is-active", s.dataset.view === name); });
+    tabs.forEach(function (t) { t.classList.toggle("is-active", t.dataset.view === name); });
+    if (name === "today") renderToday();
+    else if (name === "cards") { scrEditing = false; renderCards(); }
+    else if (name === "banks") renderBanks();
+    else if (name === "answered") renderAnswered();
+    else if (name === "more") renderMore();
+    window.scrollTo({ top: 0 });
+  }
+  tabs.forEach(function (t) { t.addEventListener("click", function () { showView(t.dataset.view); }); });
+
+  // ---- mode toggle + day arrows ---------------------------------------------
+  modeListBtn.addEventListener("click", function () { setTodayMode("list"); });
+  modeCardsBtn.addEventListener("click", function () { setTodayMode("cards"); });
+  prevDayBtn.addEventListener("click", function () { stepDay(-1); });
+  nextDayBtn.addEventListener("click", function () { stepDay(1); });
+
+  // ---- swipe navigation -----------------------------------------------------
+  var touchX = null, touchY = null;
+  document.addEventListener("touchstart", function (e) {
+    touchX = e.changedTouches[0].clientX; touchY = e.changedTouches[0].clientY;
+  }, { passive: true });
+  document.addEventListener("touchend", function (e) {
+    if (touchX === null) return;
+    var dx = e.changedTouches[0].clientX - touchX;
+    var dy = e.changedTouches[0].clientY - touchY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (currentView === "today") {
+        if (todayMode === "cards") stepDayCard(dx < 0 ? 1 : -1);
+        else stepDay(dx < 0 ? 1 : -1);
+      } else if (currentView === "cards") stepCard(dx < 0 ? 1 : -1);
+    }
+    touchX = touchY = null;
+  }, { passive: true });
 
   // ---- go -------------------------------------------------------------------
-  applyStyleChoice(currentStyleChoice()); // ensures liturgical season is set on load
-  renderDay(todayKey);
+  applyStyle(currentStyle());
+  applySeason();
+  renderToday();
+
+  // expose a couple of hooks for sync.js (re-render after cloud pulls)
+  window.PrayerApp = {
+    reload: function () {
+      content = loadContent(); banks = content.banks; subjects = content.supplication.subjects;
+      cards = loadCards(); state = loadState();
+      todayKey = ensureToday(); viewKey = todayKey; dayCardIndex = 0;
+      showView(currentView);
+    }
+  };
 })();

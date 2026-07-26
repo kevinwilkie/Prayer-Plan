@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#3f7d4f" id="theme-color-meta" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icon-192.png" />
@@ -13,23 +12,47 @@
   <meta name="apple-mobile-web-app-title" content="Prayer Plan" />
   <title>Personal Prayer Plan</title>
   <script>
-    /* Apply the saved theme + style before paint to avoid a flash. */
+    /* Apply the saved palette + liturgical season before paint (no flash). */
     (function () {
       try {
-        var t = localStorage.getItem("prayerPlan.theme");
-        if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
         var s = localStorage.getItem("prayerPlan.style");
-        if (s && /^(ancient|celestial|liturgical|scroll)$/.test(s)) document.documentElement.setAttribute("data-style", s);
+        var style = /^(sanctuary|candlelight|night)$/.test(s || "") ? s : "sanctuary";
+        document.documentElement.setAttribute("data-style", style);
+        document.documentElement.setAttribute("data-season", litSeason(new Date()));
         var skipped = localStorage.getItem("prayerPlan.gate") === "off";
         var authed = localStorage.getItem("prayerPlan.authed") === "1";
         if (!skipped && !authed) document.documentElement.classList.add("show-gate");
       } catch (e) {}
+      /* Compact Western/Roman liturgical-season calc (mirrors app.js). */
+      function litSeason(t) {
+        function ymd(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+        function addDays(d, n) { var r = new Date(d); r.setDate(r.getDate() + n); return ymd(r); }
+        function easter(y) {
+          var a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4,
+            f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3),
+            h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4,
+            l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451),
+            mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1;
+          return new Date(y, mo - 1, da);
+        }
+        function advent(y) { var d = new Date(y, 10, 30), dow = d.getDay(); return addDays(d, dow <= 3 ? -dow : 7 - dow); }
+        var day = ymd(t), Y = day.getFullYear(), E = ymd(easter(Y)),
+          ash = addDays(E, -46), pent = addDays(E, 49), adv = advent(Y),
+          xmas = new Date(Y, 11, 25), epi = new Date(Y, 0, 6);
+        if (day <= epi) return "christmas";
+        if (day >= ash && day < E) return "lent";
+        if (day.getTime() === pent.getTime()) return "pentecost";
+        if (day >= E && day < pent) return "easter";
+        if (day >= adv && day < xmas) return "advent";
+        if (day >= xmas) return "christmas";
+        return "ordinary";
+      }
     })();
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Dancing+Script:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&family=Pinyon+Script&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=27" />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=28" />
 </head>
 <body>
   <!-- SIGN-IN GATE (shown before the app when signed out; sync.js fills it) -->
@@ -43,94 +66,87 @@
     </div>
   </div>
 
-  <header class="site-header">
-    <div class="site-header-inner">
-      <h1 class="site-title">Personal Prayer Plan</h1>
-      <nav class="view-tabs" aria-label="Views" role="tablist">
-        <button type="button" class="view-tab is-active" data-view="day">Today</button>
-        <button type="button" class="view-tab" data-view="adoration">Adoration</button>
-        <button type="button" class="view-tab" data-view="confession">Confession</button>
-        <button type="button" class="view-tab" data-view="thanksgiving">Thanksgiving</button>
-        <button type="button" class="view-tab" data-view="supplication">Supplication</button>
-        <button type="button" class="view-tab" data-view="cards">Prayer Cards</button>
-        <button type="button" class="view-tab" data-view="answered">Answered Prayers</button>
-        <button type="button" class="view-tab" data-view="attributes">Attributes</button>
-        <button type="button" class="view-tab" data-view="settings">Settings</button>
-      </nav>
-    </div>
-  </header>
+  <div class="app">
+    <!-- TODAY -->
+    <main id="view-today" class="screen is-active" data-view="today">
+      <header class="today-header">
+        <div class="th-top">
+          <span class="th-season" id="th-season"></span>
+          <span class="th-progress" id="th-progress"></span>
+        </div>
+        <div class="th-daterow">
+          <button type="button" class="th-arrow" id="prev-day" aria-label="Previous day">&#8249;</button>
+          <div class="th-date" id="th-date"></div>
+          <button type="button" class="th-arrow" id="next-day" aria-label="Next day">&#8250;</button>
+        </div>
+        <div class="th-jump" id="th-jump"></div>
+        <div class="th-epigraph">&ldquo;Pray without ceasing.&rdquo; &mdash; 1 Thess. 5:17</div>
+        <div class="th-segments" id="th-segments"></div>
+      </header>
+      <div class="mode-toggle">
+        <button type="button" class="mode-pill is-active" id="mode-list" data-mode="list">List</button>
+        <button type="button" class="mode-pill" id="mode-cards" data-mode="cards">Cards</button>
+      </div>
+      <section id="today-content" aria-live="polite"></section>
+    </main>
 
-  <!-- DAY VIEW -->
-  <main id="day-view" class="view">
-    <nav class="day-nav" aria-label="Choose day">
-      <button type="button" class="day-arrow" id="prev-day" aria-label="Previous day">&#8249;</button>
-      <div class="day-heading" id="day-heading"></div>
-      <button type="button" class="day-arrow" id="next-day" aria-label="Next day">&#8250;</button>
+    <!-- PRAYER CARDS -->
+    <main id="view-cards" class="screen" data-view="cards">
+      <div class="screen-head">
+        <div class="eyebrow">Prayer Cards</div>
+        <div class="screen-sub">One card at a time</div>
+      </div>
+      <div class="chip-row" id="card-filter-chips"></div>
+      <section id="cards-content"></section>
+    </main>
+
+    <!-- BANKS -->
+    <main id="view-banks" class="screen" data-view="banks">
+      <div class="screen-head">
+        <div class="eyebrow">Banks</div>
+        <div class="screen-sub">What rotates each day</div>
+      </div>
+      <div class="chip-row" id="bank-tab-chips"></div>
+      <section id="bank-content"></section>
+    </main>
+
+    <!-- ANSWERED -->
+    <main id="view-answered" class="screen" data-view="answered">
+      <div class="screen-head">
+        <div class="eyebrow">Answered</div>
+        <div class="screen-sub">A record of faithfulness</div>
+      </div>
+      <section id="answered-content"></section>
+    </main>
+
+    <!-- MORE -->
+    <main id="view-more" class="screen" data-view="more">
+      <div class="screen-head">
+        <div class="eyebrow">More</div>
+        <div class="screen-sub">Settings &amp; reference</div>
+      </div>
+      <section id="account-box"></section>
+      <section id="more-content"></section>
+    </main>
+
+    <!-- BOTTOM TAB BAR -->
+    <nav class="tabbar" aria-label="Views" role="tablist">
+      <button type="button" class="tab is-active" data-view="today"><span class="tab-dot"></span><span class="tab-label">Today</span></button>
+      <button type="button" class="tab" data-view="cards"><span class="tab-dot"></span><span class="tab-label">Cards</span></button>
+      <button type="button" class="tab" data-view="banks"><span class="tab-dot"></span><span class="tab-label">Banks</span></button>
+      <button type="button" class="tab" data-view="answered"><span class="tab-dot"></span><span class="tab-label">Answered</span></button>
+      <button type="button" class="tab" data-view="more"><span class="tab-dot"></span><span class="tab-label">More</span></button>
     </nav>
-
-    <div class="today-mode" role="tablist" aria-label="View today as">
-      <button type="button" class="mode-btn is-active" id="mode-list" data-mode="list">List</button>
-      <button type="button" class="mode-btn" id="mode-cards" data-mode="cards">Cards</button>
-    </div>
-
-    <section id="day-content" class="day-content" aria-live="polite"></section>
-  </main>
-
-  <!-- BANK EDITOR VIEW -->
-  <main id="bank-view" class="view is-hidden">
-    <section id="bank-content"></section>
-  </main>
-
-  <!-- PRAYER CARDS VIEW -->
-  <main id="cards-view" class="view is-hidden">
-    <div class="cards-controls">
-      <label class="filter-field">
-        <span class="filter-label">Show</span>
-        <select id="card-filter" class="filter-select">
-          <option value="all">All</option>
-          <option value="adoration">Adoration</option>
-          <option value="confession">Confession</option>
-          <option value="thanksgiving">Thanksgiving</option>
-          <option value="supplication">Supplication</option>
-        </select>
-      </label>
-    </div>
-    <nav class="day-nav" aria-label="Flip through prayer cards">
-      <button type="button" class="day-arrow" id="prev-card" aria-label="Previous card">&#8249;</button>
-      <div class="card-counter" id="card-counter"></div>
-      <button type="button" class="day-arrow" id="next-card" aria-label="Next card">&#8250;</button>
-    </nav>
-    <section id="cards-content"></section>
-  </main>
-
-  <!-- ANSWERED PRAYERS VIEW -->
-  <main id="answered-view" class="view is-hidden">
-    <section id="answered-content"></section>
-  </main>
-
-  <!-- ATTRIBUTES VIEW -->
-  <main id="attributes-view" class="view is-hidden">
-    <section class="attributes" id="attributes-content"></section>
-  </main>
-
-  <!-- SETTINGS VIEW -->
-  <main id="settings-view" class="view is-hidden">
-    <section id="account-box"></section>
-    <section id="settings-content"></section>
-  </main>
-
-  <footer class="site-footer">
-    <p>“Pray without ceasing.” &mdash; 1 Thessalonians 5:17</p>
-  </footer>
+  </div>
 
   <!-- Order matters: config + firebase, then content, app, then sync. -->
-  <script src="config.js?v=27"></script>
+  <script src="config.js?v=28"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="data.js?v=27"></script>
-  <script src="app.js?v=27"></script>
-  <script src="sync.js?v=27"></script>
+  <script src="data.js?v=28"></script>
+  <script src="app.js?v=28"></script>
+  <script src="sync.js?v=28"></script>
   <script>
     /* Register the service worker for offline / installable use. */
     if ("serviceWorker" in navigator) {

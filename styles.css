@@ -1,220 +1,61 @@
 /* =============================================================================
- * Prayer Plan — modern, clean styling.
- * Mobile-first, single column, light + dark mode, print-friendly.
- * Content lives in data.js; this file controls the look.
+ * Prayer Plan — "Sanctuary" redesign.
+ * Phone-first, serif-led. Three palettes (data-style) + a liturgical-season
+ * accent (data-season) that colors the header and active states year-round.
+ * Content lives in data.js; the app logic in app.js. This file is the look.
  * ============================================================================= */
 
-:root {
-  --bg: #f6f7f9;
-  --bg-elev: #ffffff;
-  --surface: #ffffff;
-  --ink: #15181f;
-  --ink-soft: #5c6270;
-  --ink-faint: #8b91a0;
-  --line: #ecedf1;
-  --line-soft: #f2f3f6;
-  --brand: #5b54e0;
-  --brand-ink: #ffffff;
-
-  /* ACTS accents — calm, slightly desaturated */
-  --adoration: #7c5cea;
-  --confession: #e0667d;
-  --thanksgiving: #1fa97f;
-  --supplication: #3d86e0;
-
-  --radius-lg: 20px;
-  --radius-md: 14px;
-  --radius-sm: 10px;
-
-  --shadow-sm: 0 1px 2px rgba(20, 24, 40, 0.04);
-  --shadow-md: 0 1px 3px rgba(20, 24, 40, 0.05), 0 10px 30px rgba(20, 24, 40, 0.06);
-
-  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
-  --font-scripture: "Newsreader", Georgia, "Times New Roman", serif;
-
-  --maxw: 680px;
+/* ---- palettes (data-style) ------------------------------------------------ */
+:root,
+:root[data-style="sanctuary"] {
+  --bg: #faf8f4;
+  --card: #ffffff;
+  --ink: #2b2822;
+  --mut: #a09a89;
+  --soft: #6d675a;
+  --hair: #e4dfd2;
+  --hair-strong: #cfc8b6;
 }
-
-/* Dark palette: applied when the user picks Dark, or by the system default
-   unless the user has explicitly chosen Light. */
-:root[data-theme="dark"],
-:root.theme-dark {
-  --bg: #0f1115;
-  --bg-elev: #15181f;
-  --surface: #181b23;
-  --ink: #eef0f5;
-  --ink-soft: #a6acba;
-  --ink-faint: #757c8c;
-  --line: #262a34;
-  --line-soft: #1f232c;
-  --brand: #8b85f5;
-  --brand-ink: #0f1115;
-  --adoration: #a48cf5;
-  --confession: #ef8197;
-  --thanksgiving: #4ec6a0;
-  --supplication: #6aa5ee;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.45), 0 12px 32px rgba(0, 0, 0, 0.5);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0f1115;
-    --bg-elev: #15181f;
-    --surface: #181b23;
-    --ink: #eef0f5;
-    --ink-soft: #a6acba;
-    --ink-faint: #757c8c;
-    --line: #262a34;
-    --line-soft: #1f232c;
-    --brand: #8b85f5;
-    --brand-ink: #0f1115;
-    --adoration: #a48cf5;
-    --confession: #ef8197;
-    --thanksgiving: #4ec6a0;
-    --supplication: #6aa5ee;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.45), 0 12px 32px rgba(0, 0, 0, 0.5);
-  }
-}
-
-/* ===========================================================================
- * ANCIENT & SPIRITUAL style — warm parchment, jewel tones, inscriptional type.
- * Works alongside light/dark. Selected via data-style="ancient".
- * ========================================================================= */
-:root[data-style="ancient"] {
-  --bg: #ece0c4;
-  --bg-elev: #f5ecd6;
-  --surface: #faf3df;
+:root[data-style="candlelight"] {
+  --bg: #f1e6cd;
+  --card: #f7efdb;
   --ink: #3a2c1a;
-  --ink-soft: #6d5a40;
-  --ink-faint: #9c8a6a;
-  --line: #d8c39c;
-  --line-soft: #e8dcbd;
-  --brand: #8a6a2f;
-  --brand-ink: #faf3df;
-  --adoration: #6f4a93;
-  --confession: #a4382c;
-  --thanksgiving: #5e7a35;
-  --supplication: #355f87;
-  --shadow-sm: 0 1px 2px rgba(74, 54, 28, 0.10);
-  --shadow-md: 0 1px 3px rgba(74, 54, 28, 0.10), 0 10px 26px rgba(74, 54, 28, 0.13);
+  --mut: #8a764f;
+  --soft: #6e5a39;
+  --hair: #d9c9a4;
+  --hair-strong: #c6b183;
+}
+:root[data-style="night"] {
+  --bg: #211f1a;
+  --card: #2b2822;
+  --ink: #ece7da;
+  --mut: #9a937f;
+  --soft: #c4bda8;
+  --hair: #3a372e;
+  --hair-strong: #4a463b;
+}
+
+/* ---- liturgical-season accent (data-season) ------------------------------- */
+:root { --acc: #3f7d4f; }
+:root[data-season="ordinary"]  { --acc: #3f7d4f; }
+:root[data-season="advent"]    { --acc: #5d4a86; }
+:root[data-season="lent"]      { --acc: #6b4a8a; }
+:root[data-season="easter"]    { --acc: #b5862c; }
+:root[data-season="christmas"] { --acc: #b5862c; }
+:root[data-season="pentecost"] { --acc: #b3402f; }
+
+/* ---- ACTS section accents (fixed across themes) --------------------------- */
+:root {
+  --adoration: #c39a1e;
+  --confession: #5d4a86;
+  --thanksgiving: #3f7d4f;
+  --supplication: #b3402f;
+  --on-acc: #f6f8f4;
   --font-ui: "EB Garamond", Georgia, "Times New Roman", serif;
-  --font-scripture: "EB Garamond", Georgia, serif;
-}
-:root[data-style="ancient"][data-theme="dark"] {
-  --bg: #1b1610;
-  --bg-elev: #241d14;
-  --surface: #2a2216;
-  --ink: #efe3c9;
-  --ink-soft: #c6b591;
-  --ink-faint: #93805f;
-  --line: #3e3424;
-  --line-soft: #2f2719;
-  --brand: #c9a85f;
-  --brand-ink: #1b1610;
-  --adoration: #b794d8;
-  --confession: #dd8a72;
-  --thanksgiving: #a3bd6f;
-  --supplication: #82acd6;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.55);
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-style="ancient"]:not([data-theme="light"]) {
-    --bg: #1b1610;
-    --bg-elev: #241d14;
-    --surface: #2a2216;
-    --ink: #efe3c9;
-    --ink-soft: #c6b591;
-    --ink-faint: #93805f;
-    --line: #3e3424;
-    --line-soft: #2f2719;
-    --brand: #c9a85f;
-    --brand-ink: #1b1610;
-    --adoration: #b794d8;
-    --confession: #dd8a72;
-    --thanksgiving: #a3bd6f;
-    --supplication: #82acd6;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-    --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.55);
-  }
-}
-
-/* ===========================================================================
- * CELESTIAL NIGHT style — deep indigo, soft starlight, gold. Its own night
- * atmosphere (largely independent of the light/dark theme).
- * ========================================================================= */
-:root[data-style="celestial"] {
-  --bg: #0b1026;
-  --bg-elev: #121a38;
-  --surface: #161d3d;
-  --ink: #e9ecfb;
-  --ink-soft: #b3bbe0;
-  --ink-faint: #7d86b3;
-  --line: #2a3358;
-  --line-soft: #1d2547;
-  --brand: #e7c66b;
-  --brand-ink: #0b1026;
-  --adoration: #b79df0;
-  --confession: #f2a3b6;
-  --thanksgiving: #8fe0c0;
-  --supplication: #8fb8f5;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.5), 0 14px 34px rgba(0, 0, 0, 0.55);
-}
-
-/* ===========================================================================
- * LITURGICAL SEASONS style — clean light base; the brand/accent color tracks
- * the church calendar via data-season (set in JS). Its own light atmosphere.
- * ========================================================================= */
-:root[data-style="liturgical"] {
-  --bg: #f5f4f1;
-  --bg-elev: #ffffff;
-  --surface: #ffffff;
-  --ink: #20232f;
-  --ink-soft: #585d6e;
-  --ink-faint: #8a8f9f;
-  --line: #e7e5df;
-  --line-soft: #f1efea;
-  --brand: #3f7d4f;
-  --brand-ink: #ffffff;
-  --shadow-sm: 0 1px 2px rgba(20, 24, 40, 0.05);
-  --shadow-md: 0 1px 3px rgba(20, 24, 40, 0.06), 0 10px 28px rgba(20, 24, 40, 0.07);
-}
-:root[data-style="liturgical"][data-season="advent"]   { --brand: #6b4fa0; --brand-ink: #fff; --bg: #f5f2f8; }
-:root[data-style="liturgical"][data-season="christmas"] { --brand: #b5862c; --brand-ink: #fff; --bg: #faf7ef; }
-:root[data-style="liturgical"][data-season="lent"]      { --brand: #5d4a86; --brand-ink: #fff; --bg: #f3f1f6; }
-:root[data-style="liturgical"][data-season="easter"]    { --brand: #c39a1e; --brand-ink: #3a2e00; --bg: #fbfaf2; }
-:root[data-style="liturgical"][data-season="pentecost"] { --brand: #b3402f; --brand-ink: #fff; --bg: #f9f1ef; }
-:root[data-style="liturgical"][data-season="ordinary"]  { --brand: #3f7d4f; --brand-ink: #fff; --bg: #f1f5f1; }
-
-/* ===========================================================================
- * SCROLL style — textured parchment background with a readable cursive hand.
- * ========================================================================= */
-:root[data-style="scroll"] {
-  --bg: #e7d6af;
-  --bg-elev: #f1e6c8;
-  --surface: #f5ecd2;
-  --ink: #45371f;
-  --ink-soft: #6e5a39;
-  --ink-faint: #9a875f;
-  --line: #cbb488;
-  --line-soft: #ded0a6;
-  --brand: #8a3a2c;
-  --brand-ink: #f5ecd2;
-  --adoration: #6a4a86;
-  --confession: #9a3a2e;
-  --thanksgiving: #5f7a35;
-  --supplication: #355f87;
-  --shadow-sm: 0 1px 2px rgba(74, 54, 28, 0.12);
-  --shadow-md: 0 1px 3px rgba(74, 54, 28, 0.12), 0 10px 24px rgba(74, 54, 28, 0.15);
-  --font-ui: "Dancing Script", "Segoe Script", cursive;
-  --font-scripture: "Dancing Script", "Segoe Script", cursive;
+  --font-prose: "Newsreader", Georgia, serif;
 }
 
 * { box-sizing: border-box; }
-
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -223,949 +64,701 @@ body {
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: 16px;
-  line-height: 1.6;
-  letter-spacing: -0.011em;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* ---- header --------------------------------------------------------------- */
-.site-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: color-mix(in srgb, var(--bg-elev) 80%, transparent);
-  -webkit-backdrop-filter: saturate(180%) blur(14px);
-  backdrop-filter: saturate(180%) blur(14px);
-  border-bottom: 1px solid var(--line);
-  padding: max(env(safe-area-inset-top), 12px) 16px 12px;
-}
-
-.site-header-inner {
-  position: relative;
-  max-width: var(--maxw);
+.app {
+  max-width: 430px;
   margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
+  background: var(--bg);
 }
 
-/* ---- settings ------------------------------------------------------------- */
-#settings-content { display: flex; flex-direction: column; gap: 14px; }
-.settings-card { display: flex; flex-direction: column; gap: 12px; }
-.setting-row {
+/* subtle phone-shell shadow when the column is narrower than the viewport */
+@media (min-width: 480px) {
+  body { background: color-mix(in srgb, var(--ink) 8%, var(--bg)); }
+  .app { box-shadow: 0 0 40px rgba(0, 0, 0, 0.12); }
+}
+
+/* ---- screens -------------------------------------------------------------- */
+.screen { display: none; flex: 1; }
+.screen.is-active { display: flex; flex-direction: column; }
+
+/* ===========================================================================
+ * TODAY — season header
+ * ========================================================================= */
+.today-header {
+  background: var(--acc);
+  color: var(--on-acc);
+  padding: max(52px, calc(env(safe-area-inset-top) + 24px)) 28px 22px;
+}
+.th-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.th-season {
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.th-progress {
+  font-size: 13px;
+  font-style: italic;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.th-daterow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.setting-label { font-weight: 600; }
-.seg {
-  display: inline-flex;
-  gap: 2px;
-  padding: 3px;
-  background: var(--line-soft);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-}
-.seg-btn {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--ink-soft);
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 600;
-  padding: 6px 16px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
-}
-.seg-btn.is-active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
-.settings-note { margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--thanksgiving); min-height: 1em; }
-
-.site-title {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-/* segmented control (scrolls horizontally when tabs overflow) */
-.view-tabs {
-  display: flex;
-  gap: 2px;
-  max-width: 100%;
-  padding: 3px;
-  background: var(--line-soft);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.view-tabs::-webkit-scrollbar { display: none; }
-
-.view-tab {
-  appearance: none;
-  flex: 0 0 auto;
-  border: none;
-  background: transparent;
-  color: var(--ink-soft);
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 600;
-  white-space: nowrap;
-  padding: 7px 15px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
-}
-.view-tab.is-active {
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: var(--shadow-sm);
-}
-
-/* ---- layout --------------------------------------------------------------- */
-.view {
-  max-width: var(--maxw);
-  margin: 0 auto;
-  padding: 20px 16px 8px;
-}
-.is-hidden { display: none; }
-
-/* ---- day navigation ------------------------------------------------------- */
-.day-nav {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 18px;
-}
-
-.day-pills {
-  display: flex;
-  flex: 1;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  scroll-snap-type: x proximity;
-}
-.day-pills::-webkit-scrollbar { display: none; }
-
-.day-pill {
-  appearance: none;
-  flex: 1 0 auto;
-  min-width: 46px;
-  scroll-snap-align: center;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-soft);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  padding: 9px 8px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: transform 0.15s ease, background 0.18s ease,
-    color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-}
-.day-pill:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
-.day-pill.is-active {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: var(--brand-ink);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--brand) 35%, transparent);
-}
-.day-pill:active { transform: scale(0.96); }
-
-.day-arrow {
-  appearance: none;
-  flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-soft);
-  font-size: 1.35rem;
-  line-height: 1;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease,
-    opacity 0.15s ease;
-}
-.day-arrow:hover { color: var(--brand); }
-.day-arrow:active { transform: scale(0.94); }
-.day-arrow:disabled { opacity: 0.32; cursor: default; }
-.day-arrow:disabled:hover { color: var(--ink-soft); }
-
-/* ---- day heading (centered between arrows) -------------------------------- */
-.day-heading {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  text-align: center;
-}
-.day-heading-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.day-name {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
-.day-date {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--ink-faint);
-}
-.jump-today {
-  appearance: none;
   margin-top: 8px;
-  border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line));
-  background: color-mix(in srgb, var(--brand) 10%, transparent);
-  color: var(--brand);
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 5px 14px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-.jump-today:hover { background: color-mix(in srgb, var(--brand) 16%, transparent); }
-.jump-today:active { transform: scale(0.96); }
-.today-badge {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--brand);
-  background: color-mix(in srgb, var(--brand) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--brand) 24%, transparent);
-  padding: 3px 9px;
-  border-radius: 999px;
-}
-
-/* ---- today view-mode toggle (List / Cards) -------------------------------- */
-.today-mode {
-  display: flex;
-  justify-content: center;
-  gap: 2px;
-  padding: 3px;
-  margin: 0 auto 18px;
-  width: -moz-fit-content;
-  width: fit-content;
-  background: var(--line-soft);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-}
-.mode-btn {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--ink-soft);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
-  padding: 6px 22px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
-}
-.mode-btn.is-active {
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: var(--shadow-sm);
-}
-.today-card-nav { margin-top: 2px; }
-
-/* ---- cards ---------------------------------------------------------------- */
-.day-content { display: flex; flex-direction: column; gap: 14px; }
-
-.card {
-  position: relative;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: 18px 20px 20px;
-  animation: rise 0.4s cubic-bezier(0.21, 0.61, 0.35, 1) both;
-}
-.card--adoration { --accent: var(--adoration); }
-.card--confession { --accent: var(--confession); }
-.card--thanksgiving { --accent: var(--thanksgiving); }
-.card--supplication { --accent: var(--supplication); }
-
-/* gentle staggered entrance */
-.card:nth-child(1) { animation-delay: 0.02s; }
-.card:nth-child(2) { animation-delay: 0.07s; }
-.card:nth-child(3) { animation-delay: 0.12s; }
-.card:nth-child(4) { animation-delay: 0.17s; }
-
-@keyframes rise {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.card-head {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  margin-bottom: 14px;
-}
-
-.card-badge {
-  flex: 0 0 auto;
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border-radius: 11px;
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
-  font-weight: 800;
-  font-size: 1.1rem;
-  letter-spacing: -0.02em;
-}
-
-.card-heading { display: flex; flex-direction: column; line-height: 1.25; gap: 1px; }
-.card-label {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 700;
-  color: var(--ink-faint);
-}
-.card-title {
-  font-size: 1.18rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--accent);
-}
-
-/* check-off toggle */
-.check-toggle {
-  appearance: none;
-  margin-left: auto;
-  align-self: flex-start;
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--line);
-  background: transparent;
-  color: #fff;
-  font-size: 0.95rem;
-  line-height: 1;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-}
-.check-toggle:hover { border-color: var(--accent); }
-.check-toggle:active { transform: scale(0.9); }
-.check-toggle.is-checked {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-.card.is-prayed { opacity: 0.72; }
-.card.is-prayed .scripture-text,
-.card.is-prayed .term-def,
-.card.is-prayed .supplication-request { color: var(--ink-soft); }
-
-/* notes card */
-.card--notes { --accent: var(--ink-faint); }
-.notes-input {
-  display: block;
-  width: 100%;
-  margin-top: 4px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-scripture);
-  font-size: 1.02rem;
-  line-height: 1.5;
-  padding: 12px 14px;
-  resize: vertical;
-  min-height: 70px;
-}
-.notes-input::placeholder { color: var(--ink-faint); font-style: italic; }
-.notes-input:focus {
-  outline: none;
-  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent);
-}
-
-/* term + definition */
-.term-block { padding-top: 14px; margin-top: 14px; border-top: 1px solid var(--line-soft); }
-.term-block:first-of-type { padding-top: 0; margin-top: 0; border-top: none; }
-.term-line { margin: 0 0 8px; }
-.term-name { font-weight: 700; }
-.term-def { color: var(--ink-soft); }
-
-/* scripture */
-.scripture { margin: 10px 0 0; padding-left: 16px; border-left: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); }
-.scripture-ref {
-  font-weight: 700;
-  font-size: 0.78rem;
-  letter-spacing: 0.01em;
-  color: var(--accent);
-  margin-bottom: 3px;
-  font-family: var(--font-ui);
-}
-.scripture-text {
-  margin: 0;
-  font-family: var(--font-scripture);
-  font-style: italic;
-  font-size: 1.08rem;
-  line-height: 1.55;
-  color: var(--ink);
-}
-
-/* supplication */
-.supplication-list {
-  list-style: none;
-  margin: 2px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-}
-.supplication-item {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: baseline;
   gap: 10px;
 }
-.supplication-subject {
-  font-weight: 600;
-  font-size: 0.82rem;
-  white-space: nowrap;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  padding: 2px 10px;
-  border-radius: 999px;
-  align-self: center;
-}
-.supplication-arrow { display: none; }
-.supplication-request { color: var(--ink); }
-
-/* ---- attributes view ------------------------------------------------------ */
-.attributes {
-  display: flex;
-  flex-direction: column;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  overflow: hidden;
-}
-.attribute { padding: 14px 18px; border-top: 1px solid var(--line-soft); }
-.attribute:first-child { border-top: none; }
-.attribute-name {
-  display: block;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  margin-bottom: 2px;
-}
-.attribute-def { color: var(--ink-soft); }
-
-/* ---- footer --------------------------------------------------------------- */
-.site-footer {
-  max-width: var(--maxw);
-  margin: 8px auto 0;
-  text-align: center;
-  color: var(--ink-faint);
-  font-family: var(--font-scripture);
-  font-style: italic;
-  font-size: 0.95rem;
-  padding: 16px 16px calc(28px + env(safe-area-inset-bottom));
-}
-
-/* ---- larger screens ------------------------------------------------------- */
-@media (min-width: 560px) {
-  .site-title { font-size: 1.15rem; }
-  .day-name { font-size: 1.9rem; }
-  .card-title { font-size: 1.25rem; }
-  .scripture-text { font-size: 1.12rem; }
-}
-
-/* ---- reduced motion ------------------------------------------------------- */
-@media (prefers-reduced-motion: reduce) {
-  .card { animation: none; }
-  * { transition-duration: 0.001ms !important; }
-}
-
-/* ---- bank editor ---------------------------------------------------------- */
-#bank-content { display: flex; flex-direction: column; gap: 14px; }
-
-.bank-intro {
-  margin: 0;
-  color: var(--ink-soft);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.add-form { display: flex; flex-direction: column; gap: 12px; }
-.add-title {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.field { display: flex; flex-direction: column; gap: 5px; }
-.field-label {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-  color: var(--ink-faint);
-}
-.field-input {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  color: var(--ink);
-  font-family: inherit;
-  font-size: 1rem;
-  padding: 10px 12px;
-  resize: vertical;
-}
-.field-input:focus {
-  outline: none;
-  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent);
-}
-
-.btn {
+.th-arrow {
   appearance: none;
-  align-self: flex-start;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-weight: 600;
-  font-size: 0.9rem;
-  padding: 9px 18px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: transform 0.15s ease, filter 0.15s ease;
-}
-.btn:active { transform: scale(0.97); }
-.btn-primary {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: var(--brand-ink);
-}
-.btn-primary:hover { filter: brightness(1.05); }
-.btn-small { padding: 8px 14px; font-size: 0.85rem; }
-
-/* existing bank items */
-.item-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  border-left: 4px solid var(--accent, var(--brand));
-}
-.item-row--adoration { --accent: var(--adoration); }
-.item-row--confession { --accent: var(--confession); }
-.item-row--thanksgiving { --accent: var(--thanksgiving); }
-.item-body { flex: 1; min-width: 0; }
-.item-name { margin: 0; font-weight: 700; }
-.item-def { margin: 3px 0 0; color: var(--ink-soft); font-size: 0.92rem; }
-.item-scripture {
-  margin: 6px 0 0;
-  font-family: var(--font-scripture);
-  font-style: italic;
-  color: var(--ink);
-  font-size: 0.98rem;
-}
-.item-ref { font-family: var(--font-ui); font-style: normal; font-weight: 700; font-size: 0.8rem; color: var(--accent, var(--brand)); }
-
-.item-remove {
-  appearance: none;
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--ink-faint);
-  font-size: 1.2rem;
-  line-height: 1;
+  flex: none;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-.item-remove:hover { background: var(--confession); border-color: var(--confession); color: #fff; }
-
-/* edit/delete actions on bank & request rows */
-.item-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
-.item-edit {
-  appearance: none;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   background: transparent;
-  color: var(--ink-soft);
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 5px 12px;
-  border-radius: 999px;
+  color: inherit;
+  font-family: inherit;
+  font-size: 19px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.th-arrow:active { transform: scale(0.92); }
+.th-arrow[disabled] { opacity: 0.35; cursor: default; }
+.th-date {
+  flex: 1;
+  text-align: center;
+  font-size: 27px;
+  font-weight: 500;
+}
+.th-jump { text-align: center; margin-top: 8px; }
+.th-jump:empty { display: none; }
+.th-jump button {
+  appearance: none;
+  font-family: inherit;
+  color: inherit;
+  background: transparent;
+  font-size: 12.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 99px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+.th-epigraph {
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-size: 15px;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+.th-segments { display: flex; gap: 5px; margin-top: 16px; }
+.th-seg { flex: 1; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.28); }
+.th-seg.is-on { background: rgba(255, 255, 255, 0.95); }
+
+/* ---- List / Cards mode toggle --------------------------------------------- */
+.mode-toggle { display: flex; gap: 8px; justify-content: center; padding: 16px 20px 0; }
+.mode-pill {
+  appearance: none;
+  font-family: inherit;
+  background: transparent;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 99px;
+  border: 1px solid var(--hair);
+  color: var(--mut);
   cursor: pointer;
   transition: color 0.15s ease, border-color 0.15s ease;
 }
-.item-edit:hover { color: var(--brand); border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
+.mode-pill.is-active { border-color: var(--ink); color: var(--ink); }
 
-/* supplication subject groups */
-.subject-group { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
-.subject-head { display: flex; align-items: center; gap: 10px; }
-.subject-head .supplication-subject { font-size: 0.9rem; }
-.subject-count { margin-right: auto; color: var(--ink-faint); font-size: 0.8rem; }
+/* ---- ACTS section accent helpers ------------------------------------------ */
+.k-adoration { color: var(--adoration); }
+.k-confession { color: var(--confession); }
+.k-thanksgiving { color: var(--thanksgiving); }
+.k-supplication { color: var(--supplication); }
 
-.request-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.request-item {
+/* ---- Today: list mode ----------------------------------------------------- */
+.today-list { padding: 8px 28px 24px; display: flex; flex-direction: column; }
+.acts-row {
+  padding: 20px 0;
+  display: flex;
+  gap: 16px;
+  border-bottom: 1px solid var(--hair);
+}
+.acts-check {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid var(--hair-strong);
+  flex: none;
+  margin-top: 3px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: var(--bg);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  justify-content: center;
+  color: var(--on-acc);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
-.request-text { flex: 1; min-width: 0; }
-.request-item .item-remove { width: 26px; height: 26px; font-size: 1.05rem; }
+.acts-check:active { transform: scale(0.9); }
+.acts-check.is-on { background: var(--acc); border-color: var(--acc); }
+.acts-body { flex: 1; min-width: 0; }
+.acts-label {
+  font-size: 11.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.acts-item { margin-top: 4px; }
+.acts-item + .acts-item { margin-top: 14px; }
+.acts-title { font-size: 20px; font-weight: 600; }
+.acts-row.is-on .acts-title { color: var(--mut); text-decoration: line-through; text-decoration-color: var(--hair-strong); }
+.acts-def {
+  font-family: var(--font-prose);
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--soft);
+  margin-top: 2px;
+}
+.acts-quote {
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+.acts-ref {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mut);
+  margin-top: 6px;
+}
+.supp-people { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.supp-person-name { font-size: 18px; font-weight: 600; }
+.supp-person-req { font-family: var(--font-prose); font-size: 15px; color: var(--soft); }
 
-.add-request { display: flex; gap: 8px; }
-.add-request .field-input { flex: 1; }
+/* ---- Notes ---------------------------------------------------------------- */
+.notes-block { padding: 20px 0 8px; }
+.notes-label {
+  font-size: 11.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--mut);
+}
+.notes-area {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  background: var(--card);
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: var(--font-prose);
+  font-size: 15px;
+  color: var(--ink);
+  resize: vertical;
+  min-height: 76px;
+}
+.notes-area::placeholder { color: var(--mut); font-style: italic; }
 
-.export-card, .import-card { display: flex; flex-direction: column; gap: 10px; }
+/* ---- Today: cards mode & deck cards --------------------------------------- */
+.today-cards { padding: 18px 20px 24px; display: flex; flex-direction: column; }
+.cards-body { padding: 0 20px 20px; display: flex; flex-direction: column; }
 
-/* ---- prayer cards --------------------------------------------------------- */
-#cards-content { display: flex; flex-direction: column; gap: 14px; }
+.deck-card {
+  background: var(--card);
+  border: 1px solid var(--hair);
+  border-radius: 16px;
+  padding: 24px 22px;
+  box-shadow: 0 2px 12px rgba(43, 40, 34, 0.06);
+}
+.deck-card.tall { min-height: 300px; padding: 26px 22px; }
+.deck-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.deck-kind {
+  font-size: 11.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.deck-counter { font-size: 13px; color: var(--mut); white-space: nowrap; }
+.deck-title { font-size: 26px; font-weight: 600; margin-top: 8px; }
+.deck-card.tall .deck-title { font-size: 27px; margin-top: 10px; }
+.deck-def {
+  font-family: var(--font-prose);
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--soft);
+  margin-top: 4px;
+}
+.deck-quote {
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.6;
+  margin-top: 16px;
+}
+.deck-ref {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mut);
+  margin-top: 6px;
+}
 
-.card-counter {
-  flex: 1;
+/* card sub-blocks (Pray this / Pray for / Answered / Reflections) */
+.blk { margin-top: 16px; border-top: 1px solid var(--hair); padding-top: 14px; }
+.blk-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mut);
+  font-weight: 600;
+}
+.blk-quote {
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+.blk-ref {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mut);
+  margin-top: 6px;
+}
+.deck-req { font-family: var(--font-prose); font-size: 16.5px; line-height: 1.5; margin-top: 8px; }
+
+.req-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.req-item { display: flex; gap: 10px; align-items: baseline; font-family: var(--font-prose); font-size: 16px; line-height: 1.5; }
+.req-item .req-text { flex: 1; min-width: 0; }
+.req-bullet { color: var(--mut); }
+
+.log-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.log-item { display: flex; gap: 10px; align-items: baseline; }
+.log-date { font-size: 12.5px; color: var(--acc); white-space: nowrap; }
+.log-text { font-family: var(--font-prose); font-size: 15px; flex: 1; min-width: 0; }
+.log-empty { font-family: var(--font-prose); font-style: italic; font-size: 14px; color: var(--mut); }
+
+.inline-add { display: flex; gap: 8px; margin-top: 12px; }
+.inline-add .tinput { flex: 1; }
+
+/* card navigation row */
+.deck-nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 6px 4px; }
+.round-btn {
+  appearance: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--hair);
+  background: var(--card);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.round-btn:active { transform: scale(0.94); }
+.round-btn[disabled] { opacity: 0.4; cursor: default; }
+.swipe-hint { font-size: 13px; font-style: italic; color: var(--mut); }
+.empty-note {
+  padding: 30px 28px;
   text-align: center;
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--ink-soft);
-  letter-spacing: 0.01em;
+  font-family: var(--font-prose);
+  font-style: italic;
+  color: var(--mut);
+  line-height: 1.6;
 }
 
-.prayer-card {
-  --accent: var(--brand);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: 20px;
+/* ===========================================================================
+ * SHARED — screen headers + chips
+ * ========================================================================= */
+.screen-head { padding: max(52px, calc(env(safe-area-inset-top) + 24px)) 28px 14px; text-align: center; }
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--acc);
+  font-weight: 600;
+}
+.screen-sub { font-size: 24px; font-weight: 500; margin-top: 4px; }
+
+.chip-row { display: flex; gap: 8px; justify-content: center; padding: 0 20px 16px; flex-wrap: wrap; }
+.chip {
+  appearance: none;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--hair);
+  background: transparent;
+  color: var(--mut);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.chip.is-active { border-color: var(--acc); background: var(--acc); color: #fff; }
+
+/* ===========================================================================
+ * BANKS + forms
+ * ========================================================================= */
+#bank-content { padding: 0 24px 24px; display: flex; flex-direction: column; gap: 14px; }
+
+.form-card {
+  background: var(--card);
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  animation: rise 0.32s cubic-bezier(0.21, 0.61, 0.35, 1) both;
+  gap: 8px;
 }
-
-/* Card body sits on a baseline grid so text lines up with the ruled lines.
-   Every line box is one --rule tall and a faint line is drawn at the bottom
-   of each row, so the writing rests on the lines like a real index card. */
-.pc-body {
-  --rule: 1.9rem;
-  background-image: linear-gradient(to bottom, transparent calc(var(--rule) - 1px), var(--line-soft) calc(var(--rule) - 1px));
-  background-size: 100% var(--rule);
-  background-position: 0 0;
-}
-.pc-body p, .pc-body h3, .pc-body figure, .pc-body blockquote,
-.pc-body li, .pc-body span, .pc-body .field-input, .pc-body .btn,
-.pc-body figcaption { line-height: var(--rule); }
-.pc-body .pc-section { display: block; margin: 0 0 var(--rule); }
-.pc-body .pc-section:last-child { margin-bottom: 0; }
-.pc-body p, .pc-body ul, .pc-body figure, .pc-body blockquote, .pc-body h3 { margin-top: 0; margin-bottom: 0; }
-.pc-body .scripture { margin: 0; }
-.pc-body .scripture-text { padding-top: 0; padding-bottom: 0; }
-/* keep form controls close to the grid */
-.pc-body .field-input { padding: 0 12px; min-height: var(--rule); }
-.pc-body .add-request { margin-top: 2px; align-items: center; }
-.pc-body .btn { padding-top: 0; padding-bottom: 0; min-height: var(--rule); }
-.pc-body .pc-btnbar { margin-top: 2px; }
-.prayer-card--adoration { --accent: var(--adoration); }
-.prayer-card--confession { --accent: var(--confession); }
-.prayer-card--thanksgiving { --accent: var(--thanksgiving); }
-.prayer-card--supplication { --accent: var(--supplication); }
-
-.pc-head {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 10px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid var(--accent);
-}
-.pc-chip {
-  order: -1;
-  flex-basis: 100%;
-  font-size: 0.66rem;
-  font-weight: 700;
+.form-label {
+  font-size: 11.5px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--accent);
+  color: var(--mut);
+  font-weight: 600;
 }
-.pc-title {
-  margin: 0;
-  flex: 1;
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--accent);
-}
-.pc-def {
-  margin: 0;
-  color: var(--ink-soft);
-  font-size: 0.98rem;
-  line-height: 1.55;
-}
-
-.pc-section { display: flex; flex-direction: column; gap: 8px; }
-.pc-label {
-  margin: 0;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 700;
-  color: var(--ink-faint);
-}
-
-.pc-scripture { margin: 0; }
-.prayer-card .scripture-ref { color: var(--accent); }
-.prayer-card .scripture-text { border-left-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
-.pc-empty { margin: 0; color: var(--ink-faint); font-style: italic; font-size: 0.92rem; }
-
-.pc-requests { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.pc-request { display: flex; align-items: baseline; gap: 8px; }
-.pc-bullet { color: var(--supplication); font-weight: 800; }
-.pc-request .request-text { flex: 1; }
-
-.pc-answers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.pc-answer {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  background: color-mix(in srgb, var(--thanksgiving) 9%, transparent);
-  border: 1px solid color-mix(in srgb, var(--thanksgiving) 22%, transparent);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-}
-.pc-answer-date {
-  flex: 0 0 auto;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--thanksgiving);
-  white-space: nowrap;
-}
-.pc-answer-text { flex: 1; min-width: 0; }
-
-.pc-edit { align-self: flex-start; }
-.pc-btnbar { display: flex; gap: 8px; }
-
-/* card type filter */
-.cards-controls { display: flex; justify-content: flex-end; margin-bottom: 14px; }
-.filter-field { display: inline-flex; align-items: center; gap: 8px; }
-.filter-label {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-  color: var(--ink-faint);
-}
-.filter-select {
-  appearance: none;
-  -webkit-appearance: none;
-  border: 1px solid var(--line);
-  background: var(--surface);
+.tinput {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg);
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-family: var(--font-prose);
+  font-size: 14px;
   color: var(--ink);
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 600;
-  padding: 8px 34px 8px 14px;
-  border-radius: 999px;
+}
+.tinput::placeholder { color: var(--mut); }
+/* inputs sitting directly on the app bg (add-person row) use card fill */
+.on-bg .tinput { background: var(--card); }
+textarea.tinput { resize: vertical; }
+
+.acc-btn {
+  appearance: none;
+  background: var(--acc);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  letter-spacing: 0.06em;
   cursor: pointer;
-  background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
-  background-position: calc(100% - 18px) 53%, calc(100% - 13px) 53%;
-  background-size: 5px 5px, 5px 5px;
-  background-repeat: no-repeat;
+  padding: 0 16px;
+  transition: filter 0.15s ease, transform 0.15s ease;
 }
-.filter-select:focus {
-  outline: none;
-  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent);
-}
-
-/* ---- answered prayers ----------------------------------------------------- */
-#answered-content { display: flex; flex-direction: column; gap: 12px; }
-.answered-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  flex-wrap: wrap;
-  border-left: 4px solid var(--thanksgiving);
-  padding: 14px 16px;
-}
-.answered-meta {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-}
-.answered-who { font-weight: 700; }
-.answered-date {
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--thanksgiving);
-  white-space: nowrap;
-}
-.answered-text {
-  flex-basis: 100%;
-  margin: 6px 0 0;
-  font-family: var(--font-scripture);
-  font-size: 1.05rem;
-  line-height: 1.5;
+.acc-btn:active { transform: scale(0.98); }
+.acc-btn.block { width: 100%; padding: 10px 0; }
+.acc-btn.sm { padding: 0 14px; font-size: 13px; }
+.ghost-btn {
+  appearance: none;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--hair-strong);
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  padding: 10px 0;
 }
 
-/* ---- celestial starfield -------------------------------------------------- */
-:root[data-style="celestial"] body {
-  background-color: #0b1026;
-  background-image:
-    radial-gradient(1.5px 1.5px at 18% 22%, rgba(255, 255, 255, 0.9), transparent),
-    radial-gradient(1px 1px at 73% 16%, rgba(255, 255, 255, 0.7), transparent),
-    radial-gradient(1px 1px at 42% 38%, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(1.5px 1.5px at 88% 44%, rgba(255, 255, 255, 0.8), transparent),
-    radial-gradient(1px 1px at 28% 64%, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(1px 1px at 62% 72%, rgba(255, 255, 255, 0.7), transparent),
-    radial-gradient(1px 1px at 9% 84%, rgba(255, 255, 255, 0.55), transparent),
-    radial-gradient(1.5px 1.5px at 80% 88%, rgba(255, 255, 255, 0.75), transparent),
-    radial-gradient(circle at 78% 12%, rgba(231, 198, 107, 0.18), transparent 22%),
-    linear-gradient(180deg, #0c1130 0%, #0a0e22 100%);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-}
+.add-row { display: flex; gap: 8px; }
+.add-row .tinput { flex: 1; }
 
-/* ---- scroll style: parchment texture + cursive ---------------------------- */
-:root[data-style="scroll"] body {
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.7;
-  background-color: #e7d6af;
-  background-image:
-    radial-gradient(55% 40% at 18% 16%, rgba(120, 90, 40, 0.07), transparent),
-    radial-gradient(45% 35% at 82% 66%, rgba(120, 90, 40, 0.08), transparent),
-    radial-gradient(42% 30% at 48% 92%, rgba(90, 65, 25, 0.06), transparent),
-    repeating-linear-gradient(90deg, rgba(150, 120, 70, 0.05) 0 1px, transparent 1px 4px),
-    repeating-linear-gradient(0deg, rgba(150, 120, 70, 0.04) 0 1px, transparent 1px 6px),
-    linear-gradient(90deg, rgba(90, 65, 25, 0.30), rgba(90, 65, 25, 0) 7%, rgba(90, 65, 25, 0) 93%, rgba(90, 65, 25, 0.30)),
-    linear-gradient(180deg, #ece0c0, #e2cfa6);
-  background-attachment: fixed;
+.item-card {
+  background: var(--card);
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  padding: 14px 18px;
 }
-:root[data-style="scroll"] .card,
-:root[data-style="scroll"] .prayer-card,
-:root[data-style="scroll"] .attributes {
-  box-shadow: none;
-  background: color-mix(in srgb, var(--surface) 76%, transparent);
-  border-color: color-mix(in srgb, var(--brand) 18%, var(--line));
-}
-:root[data-style="scroll"] .site-title,
-:root[data-style="scroll"] .day-name,
-:root[data-style="scroll"] .pc-title,
-:root[data-style="scroll"] .card-title,
-:root[data-style="scroll"] .add-title {
-  font-family: "Pinyon Script", "Dancing Script", cursive;
-  font-weight: 400;
-  letter-spacing: 0.01em;
-}
-:root[data-style="scroll"] .site-title { font-size: 1.55rem; }
-:root[data-style="scroll"] .day-name { font-size: 2rem; }
-:root[data-style="scroll"] .pc-title { font-size: 1.95rem; }
-:root[data-style="scroll"] .card-title { font-size: 1.45rem; }
-/* cursive doesn't suit uppercase/letter-spaced labels — relax them and enlarge */
-:root[data-style="scroll"] .card-label,
-:root[data-style="scroll"] .pc-label,
-:root[data-style="scroll"] .filter-label,
-:root[data-style="scroll"] .field-label,
-:root[data-style="scroll"] .pc-chip,
-:root[data-style="scroll"] .day-date,
-:root[data-style="scroll"] .scripture-ref {
-  text-transform: none;
-  letter-spacing: 0;
-  font-style: normal;
-}
-:root[data-style="scroll"] .card-label,
-:root[data-style="scroll"] .pc-label,
-:root[data-style="scroll"] .pc-chip { font-size: 1rem; font-weight: 600; }
-:root[data-style="scroll"] .scripture-text { font-style: normal; }
-:root[data-style="scroll"] .term-name,
-:root[data-style="scroll"] .supplication-subject,
-:root[data-style="scroll"] .request-text { font-weight: 700; }
-/* readability boosts for the cursive: heavier strokes, larger, airier */
-:root[data-style="scroll"] .scripture-text {
-  font-size: 1.22rem;
-  font-weight: 600;
-  line-height: 1.55;
-}
-:root[data-style="scroll"] .pc-body { --rule: 2.15rem; }
-:root[data-style="scroll"] .term-def,
-:root[data-style="scroll"] .supplication-request,
-:root[data-style="scroll"] .attribute-def,
-:root[data-style="scroll"] .pc-answer-text,
-:root[data-style="scroll"] .bank-intro,
-:root[data-style="scroll"] .supplication-request,
-:root[data-style="scroll"] .notes-input { font-weight: 600; }
+.item-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.item-title { font-size: 18px; font-weight: 600; }
+.item-actions { display: flex; gap: 12px; align-items: baseline; flex: none; }
+.item-def { font-family: var(--font-prose); font-size: 14.5px; color: var(--soft); margin-top: 2px; }
+.item-quote { font-family: var(--font-prose); font-style: italic; font-size: 14.5px; line-height: 1.55; margin-top: 6px; color: var(--ink); }
+.item-ref { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mut); margin-top: 4px; }
 
-/* ---- ancient style accents ------------------------------------------------ */
-:root[data-style="ancient"] body {
-  background-image: radial-gradient(140% 100% at 50% -5%, transparent 55%, color-mix(in srgb, var(--ink) 12%, transparent) 100%);
-  background-attachment: fixed;
+.xbtn {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--mut);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
 }
-:root[data-style="ancient"] .site-title,
-:root[data-style="ancient"] .day-name,
-:root[data-style="ancient"] .pc-title,
-:root[data-style="ancient"] .card-title,
-:root[data-style="ancient"] .add-title,
-:root[data-style="ancient"] .pc-label,
-:root[data-style="ancient"] .card-label,
-:root[data-style="ancient"] .pc-chip,
-:root[data-style="ancient"] .filter-label,
-:root[data-style="ancient"] .day-date,
-:root[data-style="ancient"] .attribute-name,
-:root[data-style="ancient"] .seg-btn,
-:root[data-style="ancient"] .mode-btn,
-:root[data-style="ancient"] .view-tab {
-  font-family: "Cinzel", Georgia, serif;
+.link-btn {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--mut);
+  font-family: inherit;
+  font-size: 13px;
   letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 0;
 }
-:root[data-style="ancient"] .site-title { letter-spacing: 0.08em; }
-:root[data-style="ancient"] .card,
-:root[data-style="ancient"] .prayer-card,
-:root[data-style="ancient"] .attributes,
-:root[data-style="ancient"] .item-row { border-color: color-mix(in srgb, var(--brand) 22%, var(--line)); }
+.acc-link {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--acc);
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 10px;
+  display: inline-block;
+}
 
-/* ---- sign-in gate --------------------------------------------------------- */
+/* supplication person card */
+.person-card {
+  background: var(--card);
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.person-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.person-name { font-size: 19px; font-weight: 600; }
+.person-count { font-size: 12.5px; color: var(--mut); }
+.person-reqs { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.person-req { display: flex; gap: 8px; align-items: baseline; }
+.person-req .req-text { flex: 1; font-family: var(--font-prose); font-size: 15px; }
+
+/* ===========================================================================
+ * PRAYER CARDS screen
+ * ========================================================================= */
+#cards-content { padding: 0 20px 20px; display: flex; flex-direction: column; }
+.pcard {
+  background: var(--card);
+  border: 1px solid var(--hair);
+  border-radius: 16px;
+  padding: 24px 22px;
+  box-shadow: 0 2px 12px rgba(43, 40, 34, 0.06);
+}
+
+/* ===========================================================================
+ * ANSWERED
+ * ========================================================================= */
+#answered-content { padding: 6px 28px 24px; display: flex; flex-direction: column; }
+.ans-empty {
+  padding: 20px 32px;
+  text-align: center;
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--mut);
+}
+.ans-row { padding: 16px 0; border-bottom: 1px solid var(--hair); }
+.ans-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.ans-name { font-size: 17px; font-weight: 600; }
+.ans-date { font-size: 12.5px; color: var(--acc); white-space: nowrap; }
+.ans-text { font-family: var(--font-prose); font-size: 15.5px; line-height: 1.55; margin-top: 4px; color: var(--soft); }
+
+/* ===========================================================================
+ * MORE
+ * ========================================================================= */
+#more-content { padding: 0 28px 28px; display: flex; flex-direction: column; gap: 26px; }
+.more-section { display: block; }
+.more-label {
+  font-size: 11.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--mut);
+  font-weight: 600;
+}
+.more-note { font-family: var(--font-prose); font-size: 14px; font-style: italic; color: var(--mut); margin-top: 6px; }
+
+.swatch-row { display: flex; gap: 10px; margin-top: 12px; }
+.swatch {
+  appearance: none;
+  flex: 1;
+  border: 1.5px solid var(--hair);
+  border-radius: 12px;
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+.swatch.is-active { border-color: var(--acc); }
+.swatch-aa { font-size: 14px; font-weight: 600; }
+.swatch-name { font-size: 12px; letter-spacing: 0.06em; margin-top: 4px; }
+
+.attr-list { display: flex; flex-direction: column; margin-top: 8px; }
+.attr-row { padding: 12px 0; border-bottom: 1px solid var(--hair); cursor: pointer; }
+.attr-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.attr-name { font-size: 17px; font-weight: 600; }
+.attr-chev { font-size: 14px; color: var(--mut); }
+.attr-def { font-family: var(--font-prose); font-size: 15px; line-height: 1.55; color: var(--soft); margin-top: 4px; }
+
+.backup-area {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  background: var(--card);
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--ink);
+  resize: vertical;
+  min-height: 96px;
+}
+.backup-btns { display: flex; gap: 10px; margin-top: 10px; }
+.backup-btns .acc-btn, .backup-btns .ghost-btn { flex: 1; }
+.backup-msg { font-size: 13px; font-style: italic; margin-top: 8px; }
+.backup-msg.ok { color: var(--thanksgiving); }
+.backup-msg.err { color: #b3402f; }
+
+.about-text { font-family: var(--font-prose); font-size: 14.5px; line-height: 1.6; color: var(--soft); margin-top: 8px; }
+.reset-link {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: #b3402f;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 14px;
+}
+
+/* ===========================================================================
+ * BOTTOM TAB BAR
+ * ========================================================================= */
+.tabbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  border-top: 1px solid var(--hair);
+  background: var(--bg);
+  display: flex;
+  padding: 12px 6px calc(14px + env(safe-area-inset-bottom));
+}
+.tab {
+  appearance: none;
+  flex: 1;
+  background: transparent;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.tab-dot { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
+.tab.is-active .tab-dot { background: var(--acc); }
+.tab-label {
+  font-size: 12.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: var(--mut);
+}
+.tab.is-active .tab-label { font-weight: 600; color: var(--ink); }
+
+/* ===========================================================================
+ * ACCOUNT / SYNC card (rendered by sync.js into #account-box) + gate
+ * ========================================================================= */
+.card {
+  background: var(--card);
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 2px 12px rgba(43, 40, 34, 0.06);
+}
+.add-title { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
+.bank-intro { margin: 0; color: var(--soft); font-family: var(--font-prose); font-size: 14.5px; line-height: 1.5; }
+.settings-note { margin: 6px 0 0; font-size: 13px; font-style: italic; color: var(--thanksgiving); min-height: 1em; }
+
+.field { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+.field-label {
+  font-size: 11.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mut);
+  font-weight: 600;
+}
+.field-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg);
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--font-prose);
+  font-size: 15px;
+  color: var(--ink);
+}
+.field-input:focus { outline: none; border-color: var(--acc); }
+
+.btn {
+  appearance: none;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--hair-strong);
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--acc); color: #fff; border-color: var(--acc); }
+.btn-primary:hover { filter: brightness(1.05); }
+.pc-btnbar { display: flex; gap: 8px; margin-top: 10px; }
+
+#account-box { padding: 0 28px; margin-bottom: 22px; }
+#account-box:empty { display: none; }
+#account-box .pc-btnbar .btn { flex: 1; }
+
+/* sign-in gate */
 .auth-gate {
   position: fixed;
   inset: 0;
@@ -1183,10 +776,10 @@ html.show-gate body { overflow: hidden; }
   width: 100%;
   max-width: 400px;
   margin: auto;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  background: var(--card);
+  border: 1px solid var(--hair);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(43, 40, 34, 0.06);
   padding: 28px 22px calc(24px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
@@ -1200,47 +793,37 @@ html.show-gate body { overflow: hidden; }
   display: grid;
   place-items: center;
   border-radius: 16px;
-  background: var(--brand);
-  color: var(--brand-ink);
+  background: var(--acc);
+  color: var(--on-acc);
   font-size: 1.7rem;
 }
-.auth-card h1 { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
-.auth-tag { margin: 0; color: var(--ink-soft); font-size: 0.95rem; line-height: 1.5; }
+.auth-card h1 { margin: 0; font-size: 26px; font-weight: 600; }
+.auth-tag { margin: 0; color: var(--soft); font-family: var(--font-prose); font-size: 15px; line-height: 1.55; }
 #auth-gate-body { display: flex; flex-direction: column; gap: 10px; text-align: left; margin-top: 4px; }
-.auth-mode-title { margin: 0 0 2px; text-align: center; font-weight: 700; font-size: 1.05rem; }
+.auth-mode-title { margin: 0 0 2px; text-align: center; font-weight: 600; font-size: 18px; }
 .auth-primary { width: 100%; }
 .auth-toggle {
   background: none;
   border: none;
-  color: var(--brand);
+  color: var(--acc);
   font: inherit;
-  font-size: 0.85rem;
-  text-decoration: underline;
+  font-size: 14px;
   cursor: pointer;
   padding: 6px;
   align-self: center;
 }
-.auth-google { width: 100%; }
-.auth-or { margin: 2px 0; text-align: center; font-size: 0.78rem; color: var(--ink-faint); }
-#auth-gate-body .pc-btnbar { display: flex; gap: 8px; }
-#auth-gate-body .pc-btnbar .btn { flex: 1; }
 .auth-skip {
   margin-top: 2px;
   background: none;
   border: none;
-  color: var(--ink-faint);
+  color: var(--mut);
   font: inherit;
-  font-size: 0.86rem;
-  text-decoration: underline;
+  font-size: 14px;
   cursor: pointer;
   padding: 6px;
 }
 
-/* ---- print ---------------------------------------------------------------- */
-@media print {
-  body { background: #fff; color: #000; }
-  .site-header, .day-nav, .site-footer { display: none; }
-  .view { max-width: none; }
-  .card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; animation: none; }
-  .is-hidden { display: none !important; }
+/* ---- reduced motion ------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.001ms !important; }
 }

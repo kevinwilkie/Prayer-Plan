@@ -10,24 +10,27 @@ Instead of a fixed week, the app keeps a **bank** of items for each section and
 reshuffling. Today's draw is locked in (reopening shows the same plan), and you
 can swipe or use the ‹ › arrows to **re-read previous days**.
 
-On the Today tab, a **List / Cards** toggle lets you read the day as the full
-list — where you can **check off** each section and jot **notes** — or flip
-through today's plan as a focused **deck of prayer cards**. Both are saved
-privately in your browser.
+The app is **phone-first** with a serif, "quiet sanctuary" look (EB Garamond +
+Newsreader). A **bottom tab bar** moves between five screens — **Today**,
+**Cards**, **Banks**, **Answered**, and **More**. The Today screen opens with a
+**season-colored header**: the accent follows the church calendar automatically
+(Advent/Lent violet, Christmas/Easter gold, Pentecost red, Ordinary Time green),
+computed from the date (Western/Roman calendar), and it shows the date with
+‹ › day arrows and a live "N of 4 prayed" progress meter.
 
-A **Settings** tab holds the appearance controls — **Theme** (System / Light /
-Dark) and **Style** — plus an **Add a prayer card** form. Styles:
+On Today, a **List / Cards** toggle lets you read the day as the full list —
+where you can **check off** each section and jot **notes** — or flip through
+today's plan as a focused **deck of prayer cards**. Both are saved privately in
+your browser.
 
-- **Modern** (default) — clean and minimal.
-- **Ancient** — warm parchment, jewel tones, inscriptional Cinzel headings.
-- **Scroll** — textured parchment (rolled-edge shading + aged fibers, all CSS)
-  with a readable cursive hand (Dancing Script body, Pinyon Script headings).
-- **Celestial Night** — a deep indigo, starlit theme with soft gold.
-- **Liturgical Seasons** — the accent color follows the church calendar
-  automatically (Advent/Lent violet, Christmas/Easter gold, Pentecost red,
-  Ordinary Time green), computed from the date (Western/Roman calendar).
+The **More** screen holds the appearance control and reference material:
 
-Your choices are remembered and applied before paint (no flash).
+- **Theme** — three palettes: **Sanctuary** (warm off-white, default),
+  **Candlelight** (soft parchment), and **Night** (dark). Pick one from the
+  swatch tiles; your choice is remembered and applied before paint (no flash).
+- **Attributes of God** — a tappable reference for Adoration.
+- **Back up / move devices** — export or import your whole plan as JSON.
+- **About** and a **Reset this device** action.
 
 There is no build step. The only dependency is the optional Firebase JS SDK
 (loaded from a CDN) used for accounts.
