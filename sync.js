@@ -26,6 +26,14 @@
   // signature of the parts that actually need a reload to re-render (banks/people/cards).
   // Excludes the daily rotation state so a new day never triggers a pull/reload loop.
   function contentSig(b) { return JSON.stringify([(b && b["prayerPlan.content.v1"]) || "", (b && b["prayerPlan.cards.v1"]) || ""]); }
+  // Which account the plan currently on this device belongs to. Used so one
+  // person's plan is never copied into a different account on a shared device.
+  var OWNER_KEY = "prayerPlan.owner";
+  var PLAN_KEYS = ["prayerPlan.content.v1", "prayerPlan.cards.v1", "prayerPlan.v3", "prayerPlan.banks.v1"];
+  function getOwner() { try { return localStorage.getItem(OWNER_KEY); } catch (e) { return null; } }
+  function setOwner(uid) { try { localStorage.setItem(OWNER_KEY, uid); } catch (e) {} }
+  // remove the personal plan (banks, people, cards, history) but keep display prefs
+  function clearLocalPlan() { try { PLAN_KEYS.forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {} }
   function writeLocal(b) { KEYS.forEach(function (k) { if (b && b[k] != null) localStorage.setItem(k, b[k]); else localStorage.removeItem(k); }); }
   // a bundle "has content" if any bank item or supplication person exists
   function bundleHasContent(b) {
@@ -132,7 +140,17 @@
       var bUp = button("Back up to cloud now", "btn btn-primary"); bUp.addEventListener("click", manualBackup); bar.appendChild(bUp);
       var bDown = button("Restore from cloud", "btn"); bDown.addEventListener("click", manualRestore); bar.appendChild(bDown);
       card.appendChild(bar);
-      var out = button("Sign out", "btn"); out.addEventListener("click", function () { auth.signOut(); }); card.appendChild(out);
+      var out = button("Sign out", "btn");
+      out.addEventListener("click", function () {
+        // Signing out removes the plan from this device, so save it to the cloud first.
+        setStatus("Saving before sign out…");
+        pushNow().then(function (ok) {
+          if (!ok && typeof window.confirm === "function" &&
+            !window.confirm("Your latest changes couldn't be saved to the cloud. Signing out removes your plan from this device. Sign out anyway?")) return;
+          auth.signOut();
+        });
+      });
+      card.appendChild(out);
     } else {
       card.appendChild(elc("p", "bank-intro", "Using this device only. Sign in to sync your plan across devices."));
       var si = button("Sign in / create account", "btn btn-primary");
@@ -155,8 +173,8 @@
     if (!currentUser) return Promise.resolve();
     var b = readLocal(), s = canon(b);
     return planRef(currentUser.uid).set({ blob: JSON.stringify(b), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
-      .then(function () { lastPushed = s; setStatus("Synced ✓"); })
-      .catch(function (e) { setStatus("Sync error: " + ((e && e.message) || "unknown")); });
+      .then(function () { lastPushed = s; setStatus("Synced ✓"); return true; })
+      .catch(function (e) { setStatus("Sync error: " + ((e && e.message) || "unknown")); return false; });
   }
   function manualBackup() { setStatus("Backing up…"); return pushNow(); }
   function manualRestore() {
@@ -189,6 +207,23 @@
       var localB = readLocal();
       var localHas = bundleHasContent(localB);
       var cloudHas = cloud && bundleHasContent(cloud);
+      var owner = getOwner();
+      // The plan on this device belongs to a DIFFERENT account: never push it.
+      // Replace it with this account's cloud plan (or a blank plan) instead.
+      if (owner && owner !== user.uid) {
+        if (cloudHas) writeLocal(cloud); else clearLocalPlan();
+        setOwner(user.uid); window.location.reload(); return;
+      }
+      // A plan made on this device without an account (or before accounts tracked
+      // ownership) and this account has nothing yet: ask before copying it in.
+      if (!owner && localHas && !cloudHas) {
+        var adopt = typeof window.confirm !== "function" || window.confirm(
+          "This device already has a prayer plan on it. Copy it into " + (user.email || "this account") +
+          "?\n\nChoose Cancel to start this account with a blank plan.");
+        setOwner(user.uid);
+        if (!adopt) { clearLocalPlan(); window.location.reload(); return; }
+      }
+      setOwner(user.uid);
       // Only reload for a real content/cards change from another device — never for
       // the routine daily rotation (that caused a reload loop on a new day).
       if (cloudHas && contentSig(cloud) !== contentSig(localB)) {
@@ -206,8 +241,14 @@
   }
   function onLogout() {
     currentUser = null; stopAuto(); setStatus("");
-    try { localStorage.removeItem("prayerPlan.authed"); localStorage.removeItem("prayerPlan.gate"); } catch (e) {}
-    updateUI(null);
+    try {
+      localStorage.removeItem("prayerPlan.authed"); localStorage.removeItem("prayerPlan.gate");
+      localStorage.removeItem(OWNER_KEY); sessionStorage.removeItem("pp_pulled");
+    } catch (e) {}
+    // Remove the signed-out account's plan from this device so the next person
+    // (or the next account) doesn't see it or inherit it. It's safe in the cloud.
+    clearLocalPlan();
+    window.location.reload();
   }
 
   updateUI(null);
