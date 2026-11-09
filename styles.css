@@ -739,19 +739,23 @@ textarea.tinput { resize: vertical; }
   border-top: 1px solid var(--hair);
   background: var(--bg);
   display: flex;
-  padding: 12px 6px calc(14px + env(safe-area-inset-bottom));
+  padding: 6px 8px max(26px, env(safe-area-inset-bottom));
 }
+html.hide-tabbar .tabbar { display: none; }
 .tab {
   appearance: none;
   flex: 1;
+  height: 44px;
   background: transparent;
   border: none;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   cursor: pointer;
   font-family: inherit;
+  padding: 0;
 }
 .tab-dot { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
 .tab.is-active .tab-dot { background: var(--acc); }

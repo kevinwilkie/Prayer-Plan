@@ -610,7 +610,7 @@
     var editBlk = el("div", "blk");
     var eb = el("button", "acc-link", "Edit in " + CAT_LABEL[entry.type] + " bank"); eb.type = "button";
     eb.style.marginTop = "0";
-    eb.addEventListener("click", function () { bankTab = entry.type; showView("banks"); });
+    eb.addEventListener("click", function () { bankTab = entry.type; showView("library"); });
     editBlk.appendChild(eb);
     card.appendChild(editBlk);
   }
@@ -1014,17 +1014,20 @@
   // The current screen is remembered for this browser tab (sessionStorage), so a
   // refresh keeps you where you were; opening the app fresh starts on Today.
   var VIEW_KEY = "prayerPlan.view";
-  var VIEWS = ["today", "cards", "banks", "answered", "more"];
+  var VIEWS = ["today", "library", "journal", "more"];
+  // Tabs from before the redesign: Banks + Prayer Cards became Library, Answered became Journal.
+  var VIEW_MIGRATE = { banks: "library", cards: "library", answered: "journal" };
+  function normalizeView(name) { name = VIEW_MIGRATE[name] || name; return VIEWS.indexOf(name) > -1 ? name : "today"; }
   var currentView = "today";
   function showView(name) {
+    name = normalizeView(name);
     currentView = name;
     try { sessionStorage.setItem(VIEW_KEY, name); } catch (e) {}
     screens.forEach(function (s) { s.classList.toggle("is-active", s.dataset.view === name); });
     tabs.forEach(function (t) { t.classList.toggle("is-active", t.dataset.view === name); });
     if (name === "today") renderToday();
-    else if (name === "cards") { scrEditing = false; renderCards(); }
-    else if (name === "banks") renderBanks();
-    else if (name === "answered") renderAnswered();
+    else if (name === "library") renderBanks();
+    else if (name === "journal") renderAnswered();
     else if (name === "more") renderMore();
     window.scrollTo({ top: 0 });
   }
@@ -1049,7 +1052,7 @@
       if (currentView === "today") {
         if (todayMode === "cards") stepDayCard(dx < 0 ? 1 : -1);
         else stepDay(dx < 0 ? 1 : -1);
-      } else if (currentView === "cards") stepCard(dx < 0 ? 1 : -1);
+      }
     }
     touchX = touchY = null;
   }, { passive: true });
@@ -1059,7 +1062,8 @@
   applySeason();
   var savedView = null;
   try { savedView = sessionStorage.getItem(VIEW_KEY); } catch (e) {}
-  if (VIEWS.indexOf(savedView) > -1 && savedView !== "today") showView(savedView);
+  savedView = savedView ? normalizeView(savedView) : null;
+  if (savedView && savedView !== "today") showView(savedView);
   else renderToday();
 
   // expose a couple of hooks for sync.js (re-render after cloud pulls)
