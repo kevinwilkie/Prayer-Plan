@@ -53,7 +53,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=33" />
+  <link rel="stylesheet" href="styles.css?v=34" />
 </head>
 <body>
   <!-- SIGN-IN GATE (shown before the app when signed out; sync.js fills it) -->
@@ -90,24 +90,19 @@
       <div id="today-session" class="session" hidden></div>
     </main>
 
-    <!-- PRAYER CARDS -->
-    <main id="view-cards" class="screen" data-view="cards">
-      <div class="screen-head">
-        <div class="eyebrow">Prayer Cards</div>
-        <div class="screen-sub">One card at a time</div>
-      </div>
-      <div class="chip-row" id="card-filter-chips"></div>
-      <section id="cards-content"></section>
-    </main>
-
-    <!-- LIBRARY (was Banks + Prayer Cards) -->
+    <!-- LIBRARY (was Banks + Prayer Cards): bank lists, prayer card detail -->
     <main id="view-library" class="screen" data-view="library">
-      <div class="screen-head">
-        <div class="eyebrow">Library</div>
-        <div class="screen-sub">What you pray through</div>
+      <div id="lib-list">
+        <div class="screen-head">
+          <div class="eyebrow">Library</div>
+          <h1 class="screen-sub">What you pray through</h1>
+        </div>
+        <div class="lib-chips" id="bank-tab-chips" role="tablist" aria-label="Banks"></div>
+        <div id="lib-rotation"></div>
+        <section id="bank-content" class="lib-rows"></section>
+        <button type="button" class="fab" id="lib-fab">+ Add</button>
       </div>
-      <div class="chip-row" id="bank-tab-chips"></div>
-      <section id="bank-content"></section>
+      <section id="lib-card" class="lib-card" hidden></section>
     </main>
 
     <!-- JOURNAL (was Answered) -->
@@ -138,14 +133,20 @@
     </nav>
   </div>
 
+  <!-- Bottom sheet (Library add / edit) -->
+  <div id="sheet" class="sheet" hidden>
+    <div class="sheet-scrim" id="sheet-scrim"></div>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title" id="sheet-panel"></div>
+  </div>
+
   <!-- Order matters: config + firebase, then content, app, then sync. -->
-  <script src="config.js?v=33"></script>
+  <script src="config.js?v=34"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="data.js?v=33"></script>
-  <script src="app.js?v=33"></script>
-  <script src="sync.js?v=33"></script>
+  <script src="data.js?v=34"></script>
+  <script src="app.js?v=34"></script>
+  <script src="sync.js?v=34"></script>
   <script>
     /* Register the service worker for offline / installable use. */
     if ("serviceWorker" in navigator) {
