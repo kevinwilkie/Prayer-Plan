@@ -688,7 +688,13 @@
   // ===========================================================================
   // BANKS SCREEN
   // ===========================================================================
+  // Remember the open bank tab for this browser tab, so a refresh keeps it.
+  var BANK_TAB_KEY = "prayerPlan.bankTab";
   var bankTab = "adoration";
+  try {
+    var savedTab = sessionStorage.getItem(BANK_TAB_KEY);
+    if (["adoration", "confession", "thanksgiving", "supplication"].indexOf(savedTab) > -1) bankTab = savedTab;
+  } catch (e) {}
   var editBank = null;   // { name, idx }
   var renameSubj = null; // subject name
   var openReqSubj = null; // subject name whose add-request input is open
@@ -699,6 +705,7 @@
   };
 
   function renderBankChips() {
+    try { sessionStorage.setItem(BANK_TAB_KEY, bankTab); } catch (e) {}
     bankTabChipsEl.innerHTML = "";
     [["adoration", "Adoration"], ["confession", "Confession"], ["thanksgiving", "Thanksgiving"], ["supplication", "Supplication"]].forEach(function (o) {
       var chip = el("button", "chip" + (bankTab === o[0] ? " is-active" : ""), o[1]); chip.type = "button";
@@ -1004,9 +1011,14 @@
   // ===========================================================================
   // VIEW SWITCHING
   // ===========================================================================
+  // The current screen is remembered for this browser tab (sessionStorage), so a
+  // refresh keeps you where you were; opening the app fresh starts on Today.
+  var VIEW_KEY = "prayerPlan.view";
+  var VIEWS = ["today", "cards", "banks", "answered", "more"];
   var currentView = "today";
   function showView(name) {
     currentView = name;
+    try { sessionStorage.setItem(VIEW_KEY, name); } catch (e) {}
     screens.forEach(function (s) { s.classList.toggle("is-active", s.dataset.view === name); });
     tabs.forEach(function (t) { t.classList.toggle("is-active", t.dataset.view === name); });
     if (name === "today") renderToday();
@@ -1045,7 +1057,10 @@
   // ---- go -------------------------------------------------------------------
   applyStyle(currentStyle());
   applySeason();
-  renderToday();
+  var savedView = null;
+  try { savedView = sessionStorage.getItem(VIEW_KEY); } catch (e) {}
+  if (VIEWS.indexOf(savedView) > -1 && savedView !== "today") showView(savedView);
+  else renderToday();
 
   // expose a couple of hooks for sync.js (re-render after cloud pulls)
   window.PrayerApp = {
