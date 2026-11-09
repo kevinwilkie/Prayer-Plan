@@ -19,7 +19,6 @@
   var CARDS_KEY = "prayerPlan.cards.v1";
   var THEME_KEY = "prayerPlan.theme";   // legacy (light/dark) — no longer used
   var STYLE_KEY = "prayerPlan.style";   // now holds the palette (sanctuary/candlelight/night)
-  var TODAY_MODE_KEY = "prayerPlan.todayMode";
 
   var banks = PRAYER_PLAN.banks;
   var subjects = PRAYER_PLAN.supplication.subjects;
@@ -27,15 +26,16 @@
 
   // ---- element handles ------------------------------------------------------
   var thSeasonEl = document.getElementById("th-season");
+  var thNextEl = document.getElementById("th-next");
   var thProgressEl = document.getElementById("th-progress");
   var thDateEl = document.getElementById("th-date");
   var thJumpEl = document.getElementById("th-jump");
-  var thSegmentsEl = document.getElementById("th-segments");
   var prevDayBtn = document.getElementById("prev-day");
   var nextDayBtn = document.getElementById("next-day");
-  var modeListBtn = document.getElementById("mode-list");
-  var modeCardsBtn = document.getElementById("mode-cards");
+  var todayOverviewEl = document.getElementById("today-overview");
   var todayContentEl = document.getElementById("today-content");
+  var continueEl = document.getElementById("continue-wrap");
+  var sessionEl = document.getElementById("today-session");
   var cardFilterChipsEl = document.getElementById("card-filter-chips");
   var cardsContentEl = document.getElementById("cards-content");
   var bankTabChipsEl = document.getElementById("bank-tab-chips");
@@ -230,9 +230,8 @@
   var viewKey = todayKey;
   function journalFor(key) { if (!state.journal[key]) state.journal[key] = { checks: {}, notes: "" }; return state.journal[key]; }
 
-  var todayMode = "list";
-  try { var m = localStorage.getItem(TODAY_MODE_KEY); if (m === "cards" || m === "list") todayMode = m; } catch (e) {}
-  var dayCardIndex = 0;
+  // Guided session position: null (overview) | step index | "done". Not persisted.
+  var session = null;
 
   // ===========================================================================
   // LITURGICAL SEASON (Western/Roman) + palette
@@ -269,6 +268,15 @@
   var SEASON_ACC = { ordinary: "#3f7d4f", advent: "#5d4a86", lent: "#6b4a8a",
     easter: "#b5862c", christmas: "#b5862c", pentecost: "#b3402f" };
   var season = liturgicalSeason(new Date());
+  // The next season boundary after `from`, e.g. { season: "advent", days: 20 }.
+  function nextSeason(from) {
+    var cur = liturgicalSeason(from);
+    for (var i = 1; i < 400; i++) {
+      var s2 = liturgicalSeason(addDays(from, i));
+      if (s2 !== cur) return { season: s2, days: i };
+    }
+    return null;
+  }
   function applySeason() {
     document.documentElement.setAttribute("data-season", season);
     if (themeMeta) themeMeta.setAttribute("content", SEASON_ACC[season] || SEASON_ACC.ordinary);
@@ -292,196 +300,271 @@
   }
 
   // ===========================================================================
-  // TODAY VIEW
+  // TODAY — overview + guided session
   // ===========================================================================
   var SECTIONS = [
-    { key: "adoration", label: "Adoration" },
-    { key: "confession", label: "Confession" },
-    { key: "thanksgiving", label: "Thanksgiving" },
-    { key: "supplication", label: "Supplication" }
+    { key: "adoration", label: "Adoration", short: "Adore" },
+    { key: "confession", label: "Confession", short: "Confess" },
+    { key: "thanksgiving", label: "Thanksgiving", short: "Thank" },
+    { key: "supplication", label: "Supplication", short: "Ask" }
   ];
+  var SECTION_KEYS = SECTIONS.map(function (s) { return s.key; });
+  var CAT_LABEL = { adoration: "Adoration", confession: "Confession", thanksgiving: "Thanksgiving", supplication: "Supplication" };
+  var CAT_COLOR = { adoration: "var(--adoration)", confession: "var(--confession)",
+    thanksgiving: "var(--thanksgiving)", supplication: "var(--supplication)" };
+  var COUNT_WORD = ["", "one", "two", "three", "four"];
+
   function scripturesOf(item, type) {
     if (type === "thanksgiving") return item.scriptures || [];
     return item.scripture ? [item.scripture] : [];
   }
+  function itemTitle(item) { return item.term || item.title || ""; }
+  function personScripture(name) {
+    var ex = cards.extras[name];
+    return (ex && ex.scripture && (ex.scripture.ref || ex.scripture.text)) ? ex.scripture : null;
+  }
+  function presentSections(plan) { return SECTION_KEYS.filter(function (k) { return plan[k] && plan[k].length; }); }
+  // One step per item in ACTS order; Supplication is one step per person.
+  function sessionSteps(plan) {
+    var out = [];
+    SECTION_KEYS.forEach(function (sec) {
+      var list = plan[sec] || [];
+      list.forEach(function (x, i) { out.push({ sec: sec, idx: i, count: list.length, entry: x }); });
+    });
+    return out;
+  }
+  function stepTitle(st) { return st.sec === "supplication" ? st.entry.name : itemTitle(st.entry); }
 
   function renderToday() {
     var plan = state.history[viewKey];
+    if (session !== null) { renderSession(plan); return; }
+    document.documentElement.classList.remove("hide-tabbar");
+    sessionEl.hidden = true; sessionEl.innerHTML = "";
+    todayOverviewEl.hidden = false;
     var jr = journalFor(viewKey);
+    var present = presentSections(plan);
 
-    // header bits
+    // header
     thSeasonEl.textContent = SEASON_LABEL[season] || "Ordinary Time";
+    var nx = nextSeason(dateFromKey(viewKey));
+    thNextEl.textContent = nx ? (SEASON_LABEL[nx.season] + " in " + nx.days + (nx.days === 1 ? " day" : " days")) : "";
     thDateEl.textContent = plan.label;
-    var done = SECTIONS.filter(function (s) { return jr.checks[s.key]; }).length;
-    thProgressEl.textContent = done + " of 4 prayed";
-    thSegmentsEl.innerHTML = "";
-    SECTIONS.forEach(function (s) {
-      var seg = el("div", "th-seg" + (jr.checks[s.key] ? " is-on" : ""));
-      thSegmentsEl.appendChild(seg);
-    });
     var pos = state.order.indexOf(viewKey);
     prevDayBtn.disabled = pos <= 0;
     nextDayBtn.disabled = pos >= state.order.length - 1;
     thJumpEl.innerHTML = "";
     if (viewKey !== todayKey) {
-      var jb = el("button", null, "Jump to today"); jb.type = "button";
-      jb.addEventListener("click", function () { dayCardIndex = 0; viewKey = todayKey; renderToday(); });
+      var jb = el("button", "th-jump-btn", "Jump to today"); jb.type = "button";
+      jb.addEventListener("click", function () { viewKey = todayKey; renderToday(); });
       thJumpEl.appendChild(jb);
     }
-    modeListBtn.classList.toggle("is-active", todayMode === "list");
-    modeCardsBtn.classList.toggle("is-active", todayMode === "cards");
+    thProgressEl.innerHTML = "";
+    SECTIONS.forEach(function (s) {
+      var col = el("div", "thp-col" + (jr.checks[s.key] ? " is-on" : ""));
+      col.appendChild(el("div", "thp-bar"));
+      col.appendChild(el("span", "thp-label", s.short));
+      thProgressEl.appendChild(col);
+    });
 
+    // rows
     todayContentEl.innerHTML = "";
-    if (todayMode === "cards") renderTodayCards(plan);
-    else renderTodayList(plan);
+    present.forEach(function (sec) { todayContentEl.appendChild(todayRow(plan, sec)); });
+    if (!present.length) {
+      todayContentEl.appendChild(el("div", "empty-copy", "Your Library is empty. Add prayers in Library to start drawing a daily plan."));
+    }
+
+    // continue bar
+    continueEl.innerHTML = "";
+    if (present.length) {
+      var steps = sessionSteps(plan);
+      var firstOpen = present.filter(function (k) { return !jr.checks[k]; })[0];
+      var anyDone = present.some(function (k) { return jr.checks[k]; });
+      var eyebrow, title, start;
+      if (firstOpen) {
+        eyebrow = anyDone ? "Continue" : "Begin"; title = CAT_LABEL[firstOpen];
+        start = steps.map(function (x) { return x.sec; }).indexOf(firstOpen);
+      } else {
+        eyebrow = present.length === 4 ? "All four prayed" : "All prayed"; title = "Pray through again"; start = 0;
+      }
+      var bar = el("button", "continue-bar"); bar.type = "button";
+      var txt = el("span", "cb-text");
+      txt.appendChild(el("span", "cb-eyebrow", eyebrow));
+      txt.appendChild(el("span", "cb-title", title));
+      bar.appendChild(txt);
+      bar.appendChild(el("span", "cb-arrow", "→"));
+      bar.addEventListener("click", function () { startSession(start); });
+      continueEl.appendChild(bar);
+    }
   }
 
-  function actsRow(sectionKey, label, items, type) {
+  function todayRow(plan, sec) {
     var jr = journalFor(viewKey);
-    var on = !!jr.checks[sectionKey];
-    var row = el("div", "acts-row" + (on ? " is-on" : ""));
-    var check = el("button", "acts-check" + (on ? " is-on" : "")); check.type = "button";
-    check.setAttribute("aria-label", "Mark " + label + " as prayed");
-    check.innerHTML = on ? "&#10003;" : "";
-    check.addEventListener("click", function () { jr.checks[sectionKey] = !jr.checks[sectionKey]; saveState(); renderToday(); });
+    var list = plan[sec], on = !!jr.checks[sec];
+    var label = CAT_LABEL[sec], title, sub;
+    if (sec === "supplication") {
+      title = list.map(function (x) { return x.name; }).join(", ");
+      sub = "One request each, drawn in rotation.";
+      label += " · " + list.length + (list.length === 1 ? " person" : " people");
+    } else {
+      title = list.map(itemTitle).join(", ");
+      if (list.length === 1) {
+        var sc = scripturesOf(list[0], sec)[0];
+        sub = (sec !== "thanksgiving" && list[0].definition) || (sc && sc.ref) || "";
+      } else {
+        sub = list.map(function (x) { var s0 = scripturesOf(x, sec)[0]; return s0 && s0.ref; }).filter(Boolean).join(" · ");
+        label += " · " + list.length;
+      }
+    }
+    var row = el("div", "t-row" + (on ? " is-on" : ""));
+    var check = el("button", "t-check"); check.type = "button";
+    check.setAttribute("aria-pressed", on ? "true" : "false");
+    check.setAttribute("aria-label", "Mark " + CAT_LABEL[sec] + " as prayed");
+    check.appendChild(el("span", "t-ring", on ? "✓" : ""));
+    check.addEventListener("click", function () { jr.checks[sec] = !jr.checks[sec]; saveState(); renderToday(); });
     row.appendChild(check);
-    var body = el("div", "acts-body");
-    body.appendChild(el("div", "acts-label k-" + type, label));
-    items.forEach(function (item) {
-      var it = el("div", "acts-item");
-      it.appendChild(el("div", "acts-title", type === "thanksgiving" ? item.title : item.term));
-      if (type !== "thanksgiving" && item.definition) it.appendChild(el("div", "acts-def", item.definition));
-      scripturesOf(item, type).forEach(function (s) {
-        if (s.text) it.appendChild(el("div", "acts-quote", "“" + s.text + "”"));
-        if (s.ref) it.appendChild(el("div", "acts-ref", s.ref));
-      });
-      body.appendChild(it);
+    var open = el("button", "t-open"); open.type = "button";
+    var body = el("span", "t-body");
+    var lab = el("span", "sec-label t-label", label); lab.style.color = CAT_COLOR[sec];
+    body.appendChild(lab);
+    body.appendChild(el("span", "t-title", title));
+    if (sub) body.appendChild(el("span", "t-sub", sub));
+    open.appendChild(body);
+    open.appendChild(el("span", "t-chev", "›"));
+    open.addEventListener("click", function () {
+      var steps = sessionSteps(plan);
+      startSession(steps.map(function (x) { return x.sec; }).indexOf(sec));
     });
-    row.appendChild(body);
+    row.appendChild(open);
     return row;
   }
 
-  function renderTodayList(plan) {
-    var wrap = el("div", "today-list");
-    if (plan.adoration.length) wrap.appendChild(actsRow("adoration", "Adoration", plan.adoration, "adoration"));
-    if (plan.confession.length) wrap.appendChild(actsRow("confession", "Confession", plan.confession, "confession"));
-    if (plan.thanksgiving.length) wrap.appendChild(actsRow("thanksgiving", "Thanksgiving", plan.thanksgiving, "thanksgiving"));
+  function startSession(idx) { session = idx < 0 ? 0 : idx; renderToday(); window.scrollTo({ top: 0 }); }
+  function exitSession() { session = null; renderToday(); window.scrollTo({ top: 0 }); }
 
-    if (plan.supplication.length) {
-      var jr = journalFor(viewKey);
-      var on = !!jr.checks.supplication;
-      var row = el("div", "acts-row" + (on ? " is-on" : ""));
-      var check = el("button", "acts-check" + (on ? " is-on" : "")); check.type = "button";
-      check.setAttribute("aria-label", "Mark Supplication as prayed");
-      check.innerHTML = on ? "&#10003;" : "";
-      check.addEventListener("click", function () { jr.checks.supplication = !jr.checks.supplication; saveState(); renderToday(); });
-      row.appendChild(check);
-      var body = el("div", "acts-body");
-      body.appendChild(el("div", "acts-label k-supplication", "Supplication"));
-      var people = el("div", "supp-people");
-      plan.supplication.forEach(function (item) {
-        var p = el("div");
-        p.appendChild(el("span", "supp-person-name", item.name));
-        p.appendChild(document.createTextNode(" "));
-        p.appendChild(el("span", "supp-person-req", "— " + (item.request || "—")));
-        people.appendChild(p);
+  function renderSession(plan) {
+    document.documentElement.classList.add("hide-tabbar");
+    todayOverviewEl.hidden = true;
+    sessionEl.hidden = false;
+    sessionEl.innerHTML = "";
+    var steps = sessionSteps(plan);
+    if (session !== "done" && !steps[session]) { session = null; renderToday(); return; }
+    if (session === "done") { renderDone(plan); return; }
+    var jr = journalFor(viewKey);
+    var present = presentSections(plan);
+    var cur = steps[session], nx = steps[session + 1];
+    var curPos = SECTION_KEYS.indexOf(cur.sec);
+    var lastInSec = !nx || nx.sec !== cur.sec;
+
+    var top = el("div", "s-top");
+    var close = el("button", "s-close"); close.type = "button"; close.setAttribute("aria-label", "Close session");
+    close.appendChild(el("span", "s-close-ring", "✕"));
+    close.addEventListener("click", exitSession);
+    top.appendChild(close);
+    top.appendChild(el("span", "s-step", "Step " + (present.indexOf(cur.sec) + 1) + " of " + present.length));
+    top.appendChild(el("span", "s-spacer"));
+    sessionEl.appendChild(top);
+
+    var segs = el("div", "s-segs");
+    SECTION_KEYS.forEach(function (k, i) {
+      var seg = el("div", "s-seg");
+      if (plan[k] && plan[k].length && (jr.checks[k] || i <= curPos)) seg.style.background = CAT_COLOR[k];
+      segs.appendChild(seg);
+    });
+    sessionEl.appendChild(segs);
+
+    var bodyEl = el("div", "s-body");
+    var card = el("div", "s-card");
+    var head = el("div", "s-card-head");
+    var lab = el("span", "sec-label", CAT_LABEL[cur.sec]); lab.style.color = CAT_COLOR[cur.sec];
+    head.appendChild(lab);
+    head.appendChild(el("span", "s-counter", cur.count > 1 ? (cur.idx + 1) + " of " + cur.count : ""));
+    card.appendChild(head);
+    card.appendChild(el("div", "s-title", stepTitle(cur)));
+    var verses;
+    if (cur.sec === "supplication") {
+      card.appendChild(el("div", "mini-label s-prayfor", "Pray for"));
+      card.appendChild(el("div", "s-req", cur.entry.request || "No requests yet"));
+      var ps = personScripture(cur.entry.name);
+      verses = ps ? [ps] : [];
+    } else {
+      if (cur.sec !== "thanksgiving" && cur.entry.definition) card.appendChild(el("div", "s-def", cur.entry.definition));
+      verses = scripturesOf(cur.entry, cur.sec).filter(function (v) { return v.text || v.ref; });
+    }
+    if (verses.length) {
+      card.appendChild(el("div", "s-rule"));
+      verses.forEach(function (v, i) {
+        if (v.text) { var q = el("div", "verse s-verse", "“" + v.text + "”"); if (i) q.style.marginTop = "14px"; card.appendChild(q); }
+        if (v.ref) card.appendChild(el("div", "verse-ref s-ref", v.ref));
       });
-      body.appendChild(people);
-      row.appendChild(body);
-      wrap.appendChild(row);
+    }
+    bodyEl.appendChild(card);
+
+    if (nx) {
+      var nxt = el("div", "s-next");
+      var nl = el("div");
+      var nlab = el("span", "sec-label s-next-label", "Next · " + CAT_LABEL[nx.sec]); nlab.style.color = CAT_COLOR[nx.sec];
+      nl.appendChild(nlab);
+      nl.appendChild(el("div", "s-next-title", stepTitle(nx)));
+      nxt.appendChild(nl);
+      if (nx.count > 1) nxt.appendChild(el("span", "s-counter", (nx.idx + 1) + " of " + nx.count));
+      bodyEl.appendChild(nxt);
     }
 
-    // Notes
-    var notes = el("div", "notes-block");
-    notes.appendChild(el("div", "notes-label", "Notes"));
-    var jr2 = journalFor(viewKey);
-    var ta = el("textarea", "notes-area");
-    ta.placeholder = "Write a prayer, a reflection, or anything God brings to mind…";
-    ta.value = jr2.notes || ""; ta.rows = 3;
+    var noteWrap = el("label", "s-note");
+    noteWrap.appendChild(el("span", "sec-label s-note-label", "Note to today"));
+    var ta = el("textarea", "s-note-area"); ta.rows = 3;
+    ta.placeholder = "Write what God brings to mind…";
+    ta.value = jr.notes || "";
     var timer = null;
     ta.addEventListener("input", function () {
-      jr2.notes = ta.value;
+      jr.notes = ta.value;
       if (timer) clearTimeout(timer);
       timer = setTimeout(saveState, 400);
     });
-    notes.appendChild(ta);
-    wrap.appendChild(notes);
+    ta.addEventListener("blur", saveState);
+    noteWrap.appendChild(ta);
+    bodyEl.appendChild(noteWrap);
+    sessionEl.appendChild(bodyEl);
 
-    if (!plan.adoration.length && !plan.confession.length && !plan.thanksgiving.length && !plan.supplication.length) {
-      wrap.insertBefore(el("div", "empty-note", "Your banks are empty. Add prayers in Banks, or import a plan from More → Back up / move devices."), wrap.firstChild);
-    }
-    todayContentEl.appendChild(wrap);
+    var foot = el("div", "s-foot");
+    var back = el("button", "s-back", "‹"); back.type = "button"; back.setAttribute("aria-label", "Previous step");
+    back.addEventListener("click", function () { saveState(); session = session > 0 ? session - 1 : null; renderToday(); });
+    var amen = el("button", "s-amen", !nx ? "Amen" : (lastInSec ? "Amen · " + CAT_LABEL[nx.sec] : "Amen · next"));
+    amen.type = "button";
+    amen.style.background = CAT_COLOR[cur.sec];
+    amen.addEventListener("click", function () {
+      if (lastInSec) jr.checks[cur.sec] = true;
+      saveState();
+      session = nx ? session + 1 : "done";
+      renderToday(); window.scrollTo({ top: 0 });
+    });
+    foot.appendChild(back); foot.appendChild(amen);
+    sessionEl.appendChild(foot);
   }
 
-  // Today plan as a flip-through deck.
-  function todayDeck(plan) {
-    var d = [];
-    plan.adoration.forEach(function (it) { d.push({ type: "adoration", item: it }); });
-    plan.confession.forEach(function (it) { d.push({ type: "confession", item: it }); });
-    plan.thanksgiving.forEach(function (it) { d.push({ type: "thanksgiving", item: it }); });
-    plan.supplication.forEach(function (s) { d.push({ type: "supplication", supp: s }); });
-    return d;
+  function renderDone(plan) {
+    var present = presentSections(plan), n = present.length;
+    var jr = journalFor(viewKey);
+    var prayed = present.filter(function (k) { return jr.checks[k]; }).length;
+    var done = el("div", "s-done");
+    var dots = el("div", "s-dots");
+    SECTION_KEYS.forEach(function (k) { var d = el("span", "s-dot"); d.style.background = CAT_COLOR[k]; dots.appendChild(d); });
+    done.appendChild(dots);
+    done.appendChild(el("div", "s-amen-big", "Amen."));
+    var word = COUNT_WORD[n] || String(n);
+    var lead = prayed < n ? prayed + " of " + n + " prayed" : (n === 1 ? "Prayed" : "All " + word + " prayed");
+    done.appendChild(el("div", "s-done-sub", lead + " for " + plan.label + "."));
+    done.appendChild(el("div", "s-done-quote", "“Pray without ceasing.” — 1 Thess. 5:17"));
+    var btn = el("button", "s-done-btn", "Back to Today"); btn.type = "button";
+    btn.addEventListener("click", exitSession);
+    done.appendChild(btn);
+    sessionEl.appendChild(done);
   }
-  var CAT_LABEL = { adoration: "Adoration", confession: "Confession", thanksgiving: "Thanksgiving", supplication: "Supplication" };
 
-  function renderTodayCards(plan) {
-    var wrap = el("div", "today-cards");
-    var deck = todayDeck(plan);
-    if (deck.length === 0) {
-      wrap.appendChild(el("div", "empty-note", "No prayer points today. Add prayers in Banks."));
-      todayContentEl.appendChild(wrap);
-      return;
-    }
-    if (dayCardIndex < 0) dayCardIndex = 0;
-    if (dayCardIndex > deck.length - 1) dayCardIndex = deck.length - 1;
-    var entry = deck[dayCardIndex];
-    var card = el("div", "deck-card tall");
-    var head = el("div", "deck-head");
-    head.appendChild(el("div", "deck-kind k-" + entry.type, CAT_LABEL[entry.type]));
-    head.appendChild(el("div", "deck-counter", (dayCardIndex + 1) + " / " + deck.length));
-    card.appendChild(head);
-    var title = entry.type === "supplication" ? entry.supp.name : (entry.item.term || entry.item.title);
-    card.appendChild(el("div", "deck-title", title));
-    if (entry.type === "supplication") {
-      card.appendChild(el("div", "blk-label", "Pray for"));
-      card.appendChild(el("div", "deck-req", entry.supp.request || "—"));
-    } else {
-      if (entry.type !== "thanksgiving" && entry.item.definition) card.appendChild(el("div", "deck-def", entry.item.definition));
-      scripturesOf(entry.item, entry.type).forEach(function (s) {
-        if (s.text) card.appendChild(el("div", "deck-quote", "“" + s.text + "”"));
-        if (s.ref) card.appendChild(el("div", "deck-ref", s.ref));
-      });
-    }
-    wrap.appendChild(card);
-
-    var nav = el("div", "deck-nav");
-    var prev = el("button", "round-btn", "‹"); prev.type = "button"; prev.setAttribute("aria-label", "Previous card");
-    var next = el("button", "round-btn", "›"); next.type = "button"; next.setAttribute("aria-label", "Next card");
-    var single = deck.length <= 1;
-    prev.disabled = single; next.disabled = single;
-    prev.addEventListener("click", function () { stepDayCard(-1); });
-    next.addEventListener("click", function () { stepDayCard(1); });
-    nav.appendChild(prev);
-    nav.appendChild(el("div", "swipe-hint", "swipe to flip through"));
-    nav.appendChild(next);
-    wrap.appendChild(nav);
-    todayContentEl.appendChild(wrap);
-  }
-  function stepDayCard(delta) {
-    var len = todayDeck(state.history[viewKey]).length;
-    if (len === 0) return;
-    dayCardIndex = ((dayCardIndex + delta) % len + len) % len;
-    renderToday();
-  }
-  function setTodayMode(mode) {
-    todayMode = mode; dayCardIndex = 0;
-    try { localStorage.setItem(TODAY_MODE_KEY, mode); } catch (e) {}
-    renderToday();
-  }
   function stepDay(delta) {
     var pos = state.order.indexOf(viewKey);
     var next = pos + delta;
-    if (next >= 0 && next < state.order.length) { dayCardIndex = 0; viewKey = state.order[next]; renderToday(); }
+    if (next >= 0 && next < state.order.length) { viewKey = state.order[next]; renderToday(); }
   }
 
   // ===========================================================================
@@ -911,7 +994,7 @@
     var oi = state.order.indexOf(todayKey); if (oi > -1) state.order.splice(oi, 1);
     delete state.history[todayKey];
     saveState();
-    todayKey = ensureToday(); viewKey = todayKey; dayCardIndex = 0;
+    todayKey = ensureToday(); viewKey = todayKey; session = null;
     return { ok: true, msg: "Imported — your plan was loaded." };
   }
   function exportText() { return JSON.stringify({ content: content, cards: cards.extras }, null, 1); }
@@ -1021,6 +1104,7 @@
   var currentView = "today";
   function showView(name) {
     name = normalizeView(name);
+    if (name !== "today" || currentView !== "today") session = null;
     currentView = name;
     try { sessionStorage.setItem(VIEW_KEY, name); } catch (e) {}
     screens.forEach(function (s) { s.classList.toggle("is-active", s.dataset.view === name); });
@@ -1033,9 +1117,10 @@
   }
   tabs.forEach(function (t) { t.addEventListener("click", function () { showView(t.dataset.view); }); });
 
-  // ---- mode toggle + day arrows ---------------------------------------------
-  modeListBtn.addEventListener("click", function () { setTodayMode("list"); });
-  modeCardsBtn.addEventListener("click", function () { setTodayMode("cards"); });
+  // ---- day arrows + keyboard ------------------------------------------------
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && currentView === "today" && session !== null) exitSession();
+  });
   prevDayBtn.addEventListener("click", function () { stepDay(-1); });
   nextDayBtn.addEventListener("click", function () { stepDay(1); });
 
@@ -1049,10 +1134,7 @@
     var dx = e.changedTouches[0].clientX - touchX;
     var dy = e.changedTouches[0].clientY - touchY;
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      if (currentView === "today") {
-        if (todayMode === "cards") stepDayCard(dx < 0 ? 1 : -1);
-        else stepDay(dx < 0 ? 1 : -1);
-      }
+      if (currentView === "today" && session === null) stepDay(dx < 0 ? 1 : -1);
     }
     touchX = touchY = null;
   }, { passive: true });
@@ -1071,7 +1153,7 @@
     reload: function () {
       content = loadContent(); banks = content.banks; subjects = content.supplication.subjects;
       cards = loadCards(); state = loadState();
-      todayKey = ensureToday(); viewKey = todayKey; dayCardIndex = 0;
+      todayKey = ensureToday(); viewKey = todayKey; session = null;
       showView(currentView);
     }
   };

@@ -53,7 +53,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=32" />
+  <link rel="stylesheet" href="styles.css?v=33" />
 </head>
 <body>
   <!-- SIGN-IN GATE (shown before the app when signed out; sync.js fills it) -->
@@ -68,27 +68,26 @@
   </div>
 
   <div class="app">
-    <!-- TODAY -->
+    <!-- TODAY: overview, guided session, done -->
     <main id="view-today" class="screen is-active" data-view="today">
-      <header class="today-header">
-        <div class="th-top">
-          <span class="th-season" id="th-season"></span>
-          <span class="th-progress" id="th-progress"></span>
-        </div>
-        <div class="th-daterow">
-          <button type="button" class="th-arrow" id="prev-day" aria-label="Previous day">&#8249;</button>
-          <div class="th-date" id="th-date"></div>
-          <button type="button" class="th-arrow" id="next-day" aria-label="Next day">&#8250;</button>
-        </div>
-        <div class="th-jump" id="th-jump"></div>
-        <div class="th-epigraph">&ldquo;Pray without ceasing.&rdquo; &mdash; 1 Thess. 5:17</div>
-        <div class="th-segments" id="th-segments"></div>
-      </header>
-      <div class="mode-toggle">
-        <button type="button" class="mode-pill is-active" id="mode-list" data-mode="list">List</button>
-        <button type="button" class="mode-pill" id="mode-cards" data-mode="cards">Cards</button>
+      <div id="today-overview" class="today-overview">
+        <header class="today-header">
+          <div class="th-top">
+            <span class="th-season" id="th-season"></span>
+            <span class="th-next" id="th-next"></span>
+          </div>
+          <div class="th-daterow">
+            <button type="button" class="th-arrow" id="prev-day" aria-label="Previous day"><span aria-hidden="true">&#8249;</span></button>
+            <h1 class="th-date" id="th-date"></h1>
+            <button type="button" class="th-arrow" id="next-day" aria-label="Next day"><span aria-hidden="true">&#8250;</span></button>
+          </div>
+          <div class="th-jump" id="th-jump"></div>
+          <div class="th-progress" id="th-progress" aria-label="Today's progress"></div>
+        </header>
+        <section id="today-content" class="today-rows" aria-live="polite"></section>
+        <div class="continue-wrap" id="continue-wrap"></div>
       </div>
-      <section id="today-content" aria-live="polite"></section>
+      <div id="today-session" class="session" hidden></div>
     </main>
 
     <!-- PRAYER CARDS -->
@@ -140,13 +139,13 @@
   </div>
 
   <!-- Order matters: config + firebase, then content, app, then sync. -->
-  <script src="config.js?v=32"></script>
+  <script src="config.js?v=33"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="data.js?v=32"></script>
-  <script src="app.js?v=32"></script>
-  <script src="sync.js?v=32"></script>
+  <script src="data.js?v=33"></script>
+  <script src="app.js?v=33"></script>
+  <script src="sync.js?v=33"></script>
   <script>
     /* Register the service worker for offline / installable use. */
     if ("serviceWorker" in navigator) {
