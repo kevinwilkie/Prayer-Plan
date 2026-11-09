@@ -5,54 +5,124 @@
  * Content lives in data.js; the app logic in app.js. This file is the look.
  * ============================================================================= */
 
-/* ---- palettes (data-style) ------------------------------------------------ */
+/* ---- palettes (data-style) ------------------------------------------------
+ * Token names map the "Refined Sanctuary" handoff onto this file's variables:
+ *   --hair2 → --hair-strong · --c-ado/-con/-tha/-sup → --adoration/… ·
+ *   --bg2, --tint, --accbg are new. --acc follows the liturgical season. */
 :root,
 :root[data-style="sanctuary"] {
   --bg: #faf8f4;
+  --bg2: #f3efe6;
   --card: #ffffff;
   --ink: #2b2822;
-  --mut: #a09a89;
   --soft: #6d675a;
+  --mut: #8f8877;
   --hair: #e4dfd2;
   --hair-strong: #cfc8b6;
-}
-:root[data-style="candlelight"] {
-  --bg: #f1e6cd;
-  --card: #f7efdb;
-  --ink: #3a2c1a;
-  --mut: #8a764f;
-  --soft: #6e5a39;
-  --hair: #d9c9a4;
-  --hair-strong: #c6b183;
-}
-:root[data-style="night"] {
-  --bg: #211f1a;
-  --card: #2b2822;
-  --ink: #ece7da;
-  --mut: #9a937f;
-  --soft: #c4bda8;
-  --hair: #3a372e;
-  --hair-strong: #4a463b;
-}
-
-/* ---- liturgical-season accent (data-season) ------------------------------- */
-:root { --acc: #3f7d4f; }
-:root[data-season="ordinary"]  { --acc: #3f7d4f; }
-:root[data-season="advent"]    { --acc: #5d4a86; }
-:root[data-season="lent"]      { --acc: #6b4a8a; }
-:root[data-season="easter"]    { --acc: #b5862c; }
-:root[data-season="christmas"] { --acc: #b5862c; }
-:root[data-season="pentecost"] { --acc: #b3402f; }
-
-/* ---- ACTS section accents (fixed across themes) --------------------------- */
-:root {
-  --adoration: #c39a1e;
+  --tint: #efebe1;
+  --adoration: #a8831a;
   --confession: #5d4a86;
   --thanksgiving: #3f7d4f;
   --supplication: #b3402f;
+  --page: #e9e6df;
+  --acc: var(--season);
+  --accbg: var(--season);
+}
+:root[data-style="candlelight"] {
+  --bg: #f1e6cd;
+  --bg2: #ebdec0;
+  --card: #f7efdb;
+  --ink: #3a2c1a;
+  --soft: #6e5a39;
+  --mut: #86724c;
+  --hair: #d9c9a4;
+  --hair-strong: #c6b183;
+  --tint: #e6d8b6;
+  --adoration: #94700f;
+  --confession: #5d4a86;
+  --thanksgiving: #3a7349;
+  --supplication: #a83a2a;
+  --page: #d9cba8;
+  --acc: var(--season);
+  --accbg: var(--season);
+}
+:root[data-style="candlelight"][data-season="ordinary"] { --acc: #3a7349; }
+:root[data-style="night"] {
+  --bg: #211f1a;
+  --bg2: #1a1815;
+  --card: #2b2822;
+  --ink: #ece7da;
+  --soft: #c4bda8;
+  --mut: #9a937f;
+  --hair: #3a372e;
+  --hair-strong: #4a463b;
+  --tint: #2f2c25;
+  --adoration: #d4ad3f;
+  --confession: #a593d6;
+  --thanksgiving: #74b385;
+  --supplication: #e07a66;
+  --page: #141310;
+  --acc: var(--season-lt);   /* lighter accent for text on dark */
+  --accbg: var(--season);    /* fills keep the full-strength season color */
+}
+
+/* ---- liturgical-season accent (data-season) -------------------------------
+ * --season fills the Today header and primary buttons; --season-lt is the
+ * readable-on-dark variant used for accent text in the Night palette. */
+:root, :root[data-season="ordinary"] { --season: #3f7d4f; --season-lt: #7fbf8f; }
+:root[data-season="advent"]    { --season: #5d4a86; --season-lt: #a593d6; }
+:root[data-season="lent"]      { --season: #6b4a8a; --season-lt: #b396d6; }
+:root[data-season="easter"]    { --season: #b5862c; --season-lt: #d4ad3f; }
+:root[data-season="christmas"] { --season: #b5862c; --season-lt: #d4ad3f; }
+:root[data-season="pentecost"] { --season: #b3402f; --season-lt: #e07a66; }
+
+/* ---- type + fixed tokens -------------------------------------------------- */
+:root {
   --on-acc: #f6f8f4;
   --font-ui: "EB Garamond", Georgia, "Times New Roman", serif;
   --font-prose: "Newsreader", Georgia, serif;
+  --pad-x: 24px;
+  --r-input: 10px;
+  --r-info: 12px;
+  --r-card: 14px;
+  --r-session: 18px;
+  --shadow-card: 0 2px 14px rgba(43, 40, 34, 0.06);
+  --shadow-fab: 0 6px 18px rgba(63, 125, 79, 0.35);
+  --tabbar-h: calc(76px + env(safe-area-inset-bottom));
+}
+
+/* shared type roles */
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--acc);
+}
+.screen-title { font-size: 28px; font-weight: 500; margin-top: 2px; line-height: 1.2; }
+.sec-label {
+  font-size: 11.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.mini-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--mut);
+}
+.prose { font-family: var(--font-prose); }
+.verse { font-family: var(--font-prose); font-style: italic; font-size: 17px; line-height: 1.6; }
+.verse-ref { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mut); }
+.empty-copy {
+  padding: 36px 12px;
+  text-align: center;
+  font-family: var(--font-prose);
+  font-style: italic;
+  color: var(--mut);
+  line-height: 1.6;
 }
 
 * { box-sizing: border-box; }
@@ -81,7 +151,7 @@ body {
 
 /* subtle phone-shell shadow when the column is narrower than the viewport */
 @media (min-width: 480px) {
-  body { background: color-mix(in srgb, var(--ink) 8%, var(--bg)); }
+  body { background: var(--page); }
   .app { box-shadow: 0 0 40px rgba(0, 0, 0, 0.12); }
 }
 
@@ -93,7 +163,7 @@ body {
  * TODAY — season header
  * ========================================================================= */
 .today-header {
-  background: var(--acc);
+  background: var(--accbg);
   color: var(--on-acc);
   padding: max(52px, calc(env(safe-area-inset-top) + 24px)) 28px 22px;
 }
@@ -226,7 +296,7 @@ body {
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 .acts-check:active { transform: scale(0.9); }
-.acts-check.is-on { background: var(--acc); border-color: var(--acc); }
+.acts-check.is-on { background: var(--accbg); border-color: var(--accbg); }
 .acts-body { flex: 1; min-width: 0; }
 .acts-label {
   font-size: 11.5px;
@@ -405,15 +475,8 @@ body {
 /* ===========================================================================
  * SHARED — screen headers + chips
  * ========================================================================= */
-.screen-head { padding: max(52px, calc(env(safe-area-inset-top) + 24px)) 28px 14px; text-align: center; }
-.eyebrow {
-  font-size: 12px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--acc);
-  font-weight: 600;
-}
-.screen-sub { font-size: 24px; font-weight: 500; margin-top: 4px; }
+.screen-head { padding: max(69px, calc(env(safe-area-inset-top) + 22px)) var(--pad-x) 0; }
+.screen-sub { font-size: 28px; font-weight: 500; margin-top: 2px; line-height: 1.2; }
 
 .chip-row { display: flex; gap: 8px; justify-content: center; padding: 0 20px 16px; flex-wrap: wrap; }
 .chip {
@@ -430,7 +493,7 @@ body {
   cursor: pointer;
   transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
-.chip.is-active { border-color: var(--acc); background: var(--acc); color: #fff; }
+.chip.is-active { border-color: var(--accbg); background: var(--accbg); color: #fff; }
 
 /* ===========================================================================
  * BANKS + forms
@@ -471,7 +534,7 @@ textarea.tinput { resize: vertical; }
 
 .acc-btn {
   appearance: none;
-  background: var(--acc);
+  background: var(--accbg);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -750,7 +813,7 @@ textarea.tinput { resize: vertical; }
   transition: transform 0.15s ease, filter 0.15s ease;
 }
 .btn:active { transform: scale(0.98); }
-.btn-primary { background: var(--acc); color: #fff; border-color: var(--acc); }
+.btn-primary { background: var(--accbg); color: #fff; border-color: var(--accbg); }
 .btn-primary:hover { filter: brightness(1.05); }
 .pc-btnbar { display: flex; gap: 8px; margin-top: 10px; }
 
@@ -793,7 +856,7 @@ html.show-gate body { overflow: hidden; }
   display: grid;
   place-items: center;
   border-radius: 16px;
-  background: var(--acc);
+  background: var(--accbg);
   color: var(--on-acc);
   font-size: 1.7rem;
 }
