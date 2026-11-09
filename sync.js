@@ -87,7 +87,7 @@
     return null;
   }
 
-  var currentUser = null, lastPushed = null, timer = null;
+  var currentUser = null, lastPushed = null, timer = null, deleting = false;
   var authMode = "login"; // welcome screen defaults to Sign in (newcomers tap "Create one")
 
   function authMsg(err) {
@@ -96,6 +96,7 @@
     if (c === "auth/weak-password") return "Password must be at least 6 characters.";
     if (c === "auth/email-already-in-use") return "That email already has an account — try Log in.";
     if (c === "auth/invalid-credential" || c === "auth/wrong-password" || c === "auth/user-not-found") return "Email or password is incorrect.";
+    if (c === "auth/too-many-requests") return "Too many attempts — please wait a minute and try again.";
     if (c === "auth/network-request-failed") return "Network error — check your connection.";
     return (err && err.message) || "Something went wrong.";
   }
@@ -151,6 +152,7 @@
         });
       });
       card.appendChild(out);
+      card.appendChild(renderDeleteAccount(user));
     } else {
       card.appendChild(elc("p", "bank-intro", "Using this device only. Sign in to sync your plan across devices."));
       var si = button("Sign in / create account", "btn btn-primary");
@@ -158,6 +160,52 @@
       card.appendChild(si);
     }
     box.appendChild(card);
+  }
+
+  // "Delete account": permanently removes this account's cloud plan and login.
+  // Firebase requires a fresh sign-in to delete a login, so we ask for the password.
+  function renderDeleteAccount(user) {
+    var wrap = elc("div");
+    var open = button("Delete account", "reset-link");
+    wrap.appendChild(open);
+    open.addEventListener("click", function () {
+      wrap.innerHTML = "";
+      wrap.appendChild(elc("p", "settings-note",
+        "This permanently deletes " + (user.email || "this account") + " and everything saved to it in the cloud " +
+        "(banks, people, cards, and history), and removes the plan from this device. It can't be undone. " +
+        "Want a copy first? Use “Back up / move devices” further down this page."));
+      var pw = input("password", "Your password");
+      wrap.appendChild(field("Enter your password to confirm", pw));
+      var msg = elc("p", "settings-note");
+      var bar = elc("div", "pc-btnbar");
+      var go = button("Permanently delete account", "btn");
+      go.style.color = "#b3402f";
+      var cancel = button("Cancel", "btn");
+      cancel.addEventListener("click", function () { renderAccountBox(currentUser); });
+      go.addEventListener("click", function () {
+        if (!pw.value) { msg.textContent = "Please enter your password."; pw.focus(); return; }
+        go.disabled = cancel.disabled = true;
+        msg.textContent = "Deleting…";
+        deleting = true; stopAuto(); // never re-upload the plan mid-delete
+        var cred = firebase.auth.EmailAuthProvider.credential(user.email, pw.value);
+        user.reauthenticateWithCredential(cred)
+          .then(function () { return planRef(user.uid).delete(); })
+          .then(function () { return user.delete(); })
+          .then(function () {
+            // onAuthStateChanged(null) -> onLogout clears this device and reloads
+          })
+          .catch(function (err) {
+            deleting = false; startAuto();
+            go.disabled = cancel.disabled = false;
+            msg.textContent = authMsg(err);
+          });
+      });
+      bar.appendChild(go); bar.appendChild(cancel);
+      wrap.appendChild(bar);
+      wrap.appendChild(msg);
+      pw.focus();
+    });
+    return wrap;
   }
 
   function updateUI(user) {
@@ -170,7 +218,7 @@
   }
 
   function pushNow() {
-    if (!currentUser) return Promise.resolve();
+    if (!currentUser || deleting) return Promise.resolve(false);
     var b = readLocal(), s = canon(b);
     return planRef(currentUser.uid).set({ blob: JSON.stringify(b), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
       .then(function () { lastPushed = s; setStatus("Synced ✓"); return true; })
