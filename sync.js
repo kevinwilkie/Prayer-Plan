@@ -46,8 +46,7 @@
   }
 
   function elc(tag, cls, txt) { var n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; }
-  function field(labelText, inp) { var w = elc("label", "field"); w.appendChild(elc("span", "field-label", labelText)); w.appendChild(inp); return w; }
-  function input(type, ph) { var i = elc("input", "field-input"); i.type = type; i.placeholder = ph; return i; }
+  function input(type, ph) { var i = elc("input", "field-box"); i.type = type; i.placeholder = ph; return i; }
   function button(txt, cls) { var b = elc("button", cls); b.type = "button"; b.textContent = txt; return b; }
 
   function showGate() { document.documentElement.classList.add("show-gate"); }

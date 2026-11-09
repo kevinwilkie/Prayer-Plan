@@ -11,26 +11,34 @@ reshuffling. Today's draw is locked in (reopening shows the same plan), and you
 can swipe or use the ‹ › arrows to **re-read previous days**.
 
 The app is **phone-first** with a serif, "quiet sanctuary" look (EB Garamond +
-Newsreader). A **bottom tab bar** moves between five screens — **Today**,
-**Cards**, **Banks**, **Answered**, and **More**. The Today screen opens with a
-**season-colored header**: the accent follows the church calendar automatically
-(Advent/Lent violet, Christmas/Easter gold, Pentecost red, Ordinary Time green),
-computed from the date (Western/Roman calendar), and it shows the date with
-‹ › day arrows and a live "N of 4 prayed" progress meter.
+Newsreader). A **bottom tab bar** moves between four screens: **Today**,
+**Library**, **Journal**, and **More**. You can start on a **welcome screen**
+that signs you in, or choose **Continue without an account** and keep
+everything on the device.
 
-On Today, a **List / Cards** toggle lets you read the day as the full list —
-where you can **check off** each section and jot **notes** — or flip through
-today's plan as a focused **deck of prayer cards**. Both are saved privately in
-your browser.
+**Today** opens with a **season-colored header**. The accent follows the church
+calendar automatically (Advent/Lent violet, Christmas/Easter gold, Pentecost
+red, Ordinary Time green), and the header shows a countdown to the next season,
+the date with ‹ › day arrows, and an Adore / Confess / Thank / Ask progress bar.
+Below it is one row per ACTS section: tap the ring to mark it prayed, or tap the
+row (or the **Continue** bar) to start a **guided session** that walks through
+each item one card at a time, with a note for the day, and ends on an *Amen*
+screen.
 
-The **More** screen holds the appearance control and reference material:
+**Library** holds everything you pray through, one list per bank (Adore,
+Confess, Thanks, People). Each bank shows how far through its current rotation
+you are, and each item shows whether it's up today, up next, when you last
+prayed it, or that it's new. **+ Add** opens a sheet to add an item; tap any
+item to open its **prayer card** (Scripture to pray, requests for people, and a
+dated Answered or Reflections log), where you can also edit or delete it.
 
-- **Theme** — three palettes: **Sanctuary** (warm off-white, default),
-  **Candlelight** (soft parchment), and **Night** (dark). Pick one from the
-  swatch tiles; your choice is remembered and applied before paint (no flash).
-- **Attributes of God** — a tappable reference for Adoration.
-- **Back up / move devices** — export or import your whole plan as JSON.
-- **About** and a **Reset this device** action.
+**Journal** collects every **answered prayer** you've logged (grouped by month)
+and every day's **notes**.
+
+**More** holds your account, the **theme** (Sanctuary, Candlelight or Night),
+the **daily draw** (how many Adoration, Confession and Thanksgiving items to
+draw each day, 1 to 5), the Attributes of God reference, Back up & restore,
+About, and Reset this device.
 
 There is no build step. The only dependency is the optional Firebase JS SDK
 (loaded from a CDN) used for accounts.
@@ -38,7 +46,7 @@ There is no build step. The only dependency is the optional Firebase JS SDK
 ## Accounts & sync (optional)
 
 Configured in `config.js` (Firebase web config — safe to expose; data is
-protected by Firestore security rules). In **Settings → Account** (or the
+protected by Firestore security rules). On the **More** screen (or the
 welcome screen) you sign in with email + password. When signed in, your whole plan (banks,
 people, cards, answered prayers, notes, settings) syncs to your account and
 follows you across devices; signing in on a new device pulls your saved plan.
@@ -57,56 +65,16 @@ live in your browser. `manifest.webmanifest` defines the name and icons.
 - **Locally:** open `index.html` in any web browser.
 - **On the web (GitHub Pages):** see *Publishing* below.
 
-## Prayer Cards
-
-The **Prayer Cards** tab is inspired by Paul Miller's *A Praying Life*. The whole
-**ACTS** plan becomes a deck of index cards you **flip through one at a time**
-(arrows or swipe), grouped **Adoration → Confession → Thanksgiving →
-Supplication**. Each card shows a category label, a title, and Scripture.
-
-- **Adoration / Confession / Thanksgiving cards** (one per item in those banks)
-  show the definition/theme, the Scripture to **pray this**, and a dated
-  **Reflections** log. An *Edit in … bank* button jumps to that bank to change
-  the content. New items you add in a bank tab automatically appear in the deck.
-- **Supplication cards** (one per person/area) add a Scripture to **pray over**
-  them, their **requests** (kept in sync with the Supplication bank), and a
-  dated **Answered prayers** log to record how God answers.
-
-Add a new Supplication person/topic at the bottom of the deck; cards you create
-can be removed, and seeded content is protected. A **Show** dropdown filters the
-deck to **All / Adoration / Confession / Thanksgiving / Supplication**.
-
-## Answered Prayers
-
-The **Answered Prayers** tab gathers every entry you log on a Supplication prayer
-card into one **timeline**, newest first, each tagged with the person and the
-date it was added — a growing record of God's faithfulness. (Adoration /
-Confession / Thanksgiving cards keep their own *Reflections* and aren't mixed in
-here.)
-
 ## Editing in the app (no code)
 
-Open any bank tab — **Adoration, Confession, Thanksgiving, Supplication** — to
-manage its contents. You can **add**, **edit**, or **delete** any item (including
-the originals), and under Supplication you can rename or remove people and edit
-their requests. Prayer Cards can also be deleted from the deck. Everything is
-saved on your device; the bank's **Back up / export** box copies your whole plan
-as JSON (to move devices, keep a backup, or send to Claude to bake in).
+Everything is edited in **Library**: add items with **+ Add**, and open any item
+to edit or delete it. For people, add and remove requests right on their card.
+Everything saves on your device (and to your account when signed in).
+**More → Back up & restore** copies your whole plan as JSON, to move devices,
+keep a backup, or send to Claude to bake in.
 
 Under the hood the content is seeded from `data.js` on first run, then becomes
 your editable copy in the browser (`localStorage`).
-
-## Adding content in the app (no code)
-
-Each bank has its own **tab** at the top — **Adoration, Confession, Thanksgiving,
-Supplication**. Open a tab to see everything in that bank and **add your own**
-items (or, for Supplication, add people and requests). Additions save in your
-browser and join the rotation on the next day's draw.
-
-Because those additions live in your browser only, each bank tab has an
-**Export** button: tap it to copy your additions and send them to Claude to bake
-them permanently into `data.js` (so they're shared across devices and survive a
-cache clear).
 
 ## Editing the content in code
 
@@ -116,8 +84,9 @@ anything repeats. After editing, just reload the page.
 
 Inside `data.js`:
 
-- `PRAYER_PLAN.dailyCounts` — how many items to draw per day from each bank,
-  e.g. `{ adoration: 1, confession: 2, thanksgiving: 1 }`.
+- `PRAYER_PLAN.dailyCounts` — the default number of items to draw per day from
+  each bank, e.g. `{ adoration: 1, confession: 2, thanksgiving: 1 }`. Each person
+  can change theirs in **More → Daily draw**.
 - `PRAYER_PLAN.banks.adoration` / `.confession` — a list of
   `{ term, definition, scripture }` items.
 - `PRAYER_PLAN.banks.thanksgiving` — a list of `{ title, scriptures: [ {ref,text} ] }`.
@@ -134,9 +103,9 @@ Tips:
 - If a verse contains a `"`, write it as `\"` so it doesn't end the line early.
   (Curly quotes `“ ”` are fine as-is.)
 
-> **Note on saved data:** your check-offs and notes live in this browser only
-> (via `localStorage`). They aren't synced across devices and will clear if you
-> wipe site data. Editing `data.js` never touches them.
+> **Note on saved data:** your check-offs and notes live in this browser
+> (via `localStorage`) and sync to your account when you're signed in.
+> Editing `data.js` never touches them.
 
 ## Publishing (GitHub Pages)
 
@@ -155,6 +124,7 @@ Tips:
 |------|------------|
 | `data.js` | **Your content** — the banks. Edit this. |
 | `index.html` | Page shell. |
-| `app.js` | Rotation engine, day history, check-off & notes, view navigation. |
-| `styles.css` | Styling (mobile-first, dark mode, print-friendly). |
+| `app.js` | Rotation engine, day history, Today / Library / Journal / More screens. |
+| `sync.js` | Accounts, cloud sync and the welcome screen (Firebase). |
+| `styles.css` | Styling: three palettes plus the liturgical-season accent. |
 | `.nojekyll` | Tells GitHub Pages to serve files as-is. |

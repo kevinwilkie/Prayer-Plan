@@ -114,7 +114,6 @@
   font-weight: 600;
   color: var(--mut);
 }
-.prose { font-family: var(--font-prose); }
 .verse { font-family: var(--font-prose); font-style: italic; font-size: 17px; line-height: 1.6; }
 .verse-ref { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mut); }
 .empty-copy {
@@ -460,11 +459,6 @@ body {
   cursor: pointer;
 }
 
-/* ---- ACTS section accent helpers ------------------------------------------ */
-.k-adoration { color: var(--adoration); }
-.k-confession { color: var(--confession); }
-.k-thanksgiving { color: var(--thanksgiving); }
-.k-supplication { color: var(--supplication); }
 
 /* ===========================================================================
  * SHARED controls (inputs, buttons)
