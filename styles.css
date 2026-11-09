@@ -983,124 +983,80 @@ html.hide-tabbar .tabbar { display: none; }
 .tab.is-active .tab-label { font-weight: 600; color: var(--ink); }
 
 /* ===========================================================================
- * ACCOUNT / SYNC card (rendered by sync.js into #account-box) + gate
+ * WELCOME / SIGN-IN (#auth-gate, form filled by sync.js)
  * ========================================================================= */
-.card {
-  background: var(--card);
-  border: 1px solid var(--hair);
-  border-radius: 12px;
-  padding: 16px 18px;
-  box-shadow: 0 2px 12px rgba(43, 40, 34, 0.06);
-}
-.add-title { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
-.bank-intro { margin: 0; color: var(--soft); font-family: var(--font-prose); font-size: 14.5px; line-height: 1.5; }
-.settings-note { margin: 6px 0 0; font-size: 13px; font-style: italic; color: var(--thanksgiving); min-height: 1em; }
-
-.field { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
-.field-label {
-  font-size: 11.5px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--mut);
-  font-weight: 600;
-}
-.field-input {
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--bg);
-  border: 1px solid var(--hair);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-family: var(--font-prose);
-  font-size: 15px;
-  color: var(--ink);
-}
-.field-input:focus { outline: none; border-color: var(--acc); }
-
-.btn {
-  appearance: none;
-  background: transparent;
-  color: var(--ink);
-  border: 1px solid var(--hair-strong);
-  border-radius: 8px;
-  font-family: var(--font-ui);
-  font-size: 14px;
-  letter-spacing: 0.04em;
-  padding: 9px 16px;
-  cursor: pointer;
-  transition: transform 0.15s ease, filter 0.15s ease;
-}
-.btn:active { transform: scale(0.98); }
-.btn-primary { background: var(--accbg); color: #fff; border-color: var(--accbg); }
-.btn-primary:hover { filter: brightness(1.05); }
-.pc-btnbar { display: flex; gap: 8px; margin-top: 10px; }
-
-#account-box:empty { display: none; }
-
-/* sign-in gate */
 .auth-gate {
   position: fixed;
   inset: 0;
   z-index: 1000;
   display: none;
-  align-items: center;
   justify-content: center;
-  padding: 24px;
   background: var(--bg);
-  overflow: auto;
+  overflow-y: auto;
 }
 html.show-gate .auth-gate { display: flex; }
 html.show-gate body { overflow: hidden; }
-.auth-card {
+.welcome {
   width: 100%;
-  max-width: 400px;
-  margin: auto;
-  background: var(--card);
-  border: 1px solid var(--hair);
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(43, 40, 34, 0.06);
-  padding: 28px 22px calc(24px + env(safe-area-inset-bottom));
+  max-width: 430px;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  text-align: center;
+  padding: max(103px, calc(env(safe-area-inset-top) + 56px)) 32px max(40px, calc(env(safe-area-inset-bottom) + 16px));
 }
-.auth-logo {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto;
-  display: grid;
-  place-items: center;
-  border-radius: 16px;
+.welcome-mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   background: var(--accbg);
   color: var(--on-acc);
-  font-size: 1.7rem;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
 }
-.auth-card h1 { margin: 0; font-size: 26px; font-weight: 600; }
-.auth-tag { margin: 0; color: var(--soft); font-family: var(--font-prose); font-size: 15px; line-height: 1.55; }
-#auth-gate-body { display: flex; flex-direction: column; gap: 10px; text-align: left; margin-top: 4px; }
-.auth-mode-title { margin: 0 0 2px; text-align: center; font-weight: 600; font-size: 18px; }
-.auth-primary { width: 100%; }
-.auth-toggle {
-  background: none;
+.welcome-mark img { width: 34px; height: 34px; }
+.welcome-eyebrow { margin-top: 28px; }
+.welcome-title { margin: 8px 0 0; font-size: 38px; line-height: 1.1; font-weight: 500; }
+.welcome-body { margin: 12px 0 0; font-family: var(--font-prose); font-size: 16px; line-height: 1.55; color: var(--soft); }
+.welcome-form { margin-top: 36px; display: flex; flex-direction: column; }
+.welcome-fields { display: flex; flex-direction: column; gap: 10px; }
+.welcome-fields .field-box { padding: 13px 14px; }
+.welcome-primary { width: 100%; margin-top: 4px; padding: 14px; font-size: 17px; letter-spacing: 0.04em; }
+.welcome-msg { margin: 0; font-size: 14px; font-style: italic; color: var(--soft); text-align: center; }
+.welcome-msg:empty { display: none; }
+.welcome-link {
+  appearance: none;
+  min-height: 44px;
+  margin-top: 2px;
   border: none;
+  background: transparent;
   color: var(--acc);
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   cursor: pointer;
-  padding: 6px;
-  align-self: center;
 }
-.auth-skip {
-  margin-top: 2px;
-  background: none;
+.welcome-foot {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid var(--hair);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.welcome-form { margin-bottom: 32px; }
+.welcome-skip {
+  appearance: none;
+  min-height: 44px;
+  padding: 0 12px;
   border: none;
-  color: var(--mut);
+  background: transparent;
+  color: var(--ink);
   font: inherit;
-  font-size: 14px;
+  font-size: 15.5px;
   cursor: pointer;
-  padding: 6px;
 }
+.welcome-note { margin: 0; font-family: var(--font-prose); font-style: italic; font-size: 13.5px; color: var(--mut); text-align: center; }
 
 /* ---- reduced motion ------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {

@@ -130,29 +130,35 @@
 
   function renderAuthForm(container) {
     container.innerHTML = "";
-    container.appendChild(elc("p", "auth-mode-title", authMode === "signup" ? "Create your account" : "Sign in"));
-    var em = input("email", "Email");
-    var pw = input("password", authMode === "signup" ? "Choose a password (6+ characters)" : "Password");
-    container.appendChild(field("Email", em));
-    container.appendChild(field("Password", pw));
-    var msg = elc("p", "settings-note");
-    var primary = button(authMode === "signup" ? "Create account" : "Log in", "btn btn-primary auth-primary");
-    primary.addEventListener("click", function () {
+    var signup = authMode === "signup";
+    var form = elc("form", "welcome-fields"); form.noValidate = true;
+    var em = input("email", "Email"); em.className = "field-box"; em.autocomplete = "email"; em.setAttribute("aria-label", "Email");
+    var pw = input("password", signup ? "Choose a password (6+ characters)" : "Password");
+    pw.className = "field-box"; pw.autocomplete = signup ? "new-password" : "current-password"; pw.setAttribute("aria-label", "Password");
+    form.appendChild(em);
+    form.appendChild(pw);
+    var primary = elc("button", "btn-acc welcome-primary", signup ? "Create account" : "Sign in"); primary.type = "submit";
+    form.appendChild(primary);
+    var msg = elc("p", "welcome-msg"); msg.setAttribute("role", "status");
+    form.appendChild(msg);
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
       var email = em.value.trim(), pass = pw.value;
       if (!email) { msg.textContent = "Please enter your email."; em.focus(); return; }
       if (!pass) { msg.textContent = "Please enter your password."; pw.focus(); return; }
-      if (authMode === "signup" && pass.length < 6) { msg.textContent = "Password must be at least 6 characters."; pw.focus(); return; }
-      msg.textContent = authMode === "signup" ? "Creating your account…" : "Signing in…";
-      var p = authMode === "signup"
+      if (signup && pass.length < 6) { msg.textContent = "Password must be at least 6 characters."; pw.focus(); return; }
+      msg.textContent = signup ? "Creating your account…" : "Signing in…";
+      var p = signup
         ? auth.createUserWithEmailAndPassword(email, pass)
         : auth.signInWithEmailAndPassword(email, pass);
       p.catch(function (err) { msg.textContent = authMsg(err); });
     });
-    pw.addEventListener("keydown", function (e) { if (e.key === "Enter") primary.click(); });
-    container.appendChild(primary);
-    container.appendChild(msg);
-    var toggle = button(authMode === "signup" ? "Already have an account? Log in" : "Need an account? Create one", "auth-toggle");
-    toggle.addEventListener("click", function () { authMode = (authMode === "signup") ? "login" : "signup"; renderAuthForm(container); });
+    container.appendChild(form);
+    var toggle = button(signup ? "I already have an account" : "Create an account", "welcome-link");
+    toggle.addEventListener("click", function () {
+      authMode = signup ? "login" : "signup"; renderAuthForm(container);
+      var f = container.querySelector("input"); if (f) f.focus();
+    });
     container.appendChild(toggle);
   }
 

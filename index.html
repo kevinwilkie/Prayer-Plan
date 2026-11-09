@@ -53,17 +53,22 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=36" />
+  <link rel="stylesheet" href="styles.css?v=37" />
 </head>
 <body>
-  <!-- SIGN-IN GATE (shown before the app when signed out; sync.js fills it) -->
+  <!-- WELCOME / SIGN-IN (shown before the app when signed out; sync.js fills the form) -->
   <div id="auth-gate" class="auth-gate">
-    <div class="auth-card">
-      <div class="auth-logo">&#10013;</div>
-      <h1>Personal Prayer Plan</h1>
-      <p class="auth-tag">A daily rhythm of Adoration, Confession, Thanksgiving, and Supplication. Sign in to sync your plan across devices.</p>
-      <div id="auth-gate-body"></div>
-      <button type="button" id="gate-skip" class="auth-skip">Continue without an account</button>
+    <div class="welcome">
+      <!-- App mark: swap the glyph here (or an <img>) to change it everywhere on this screen. -->
+      <div class="welcome-mark" aria-hidden="true">&#10013;</div>
+      <div class="eyebrow welcome-eyebrow">Prayer Plan</div>
+      <h1 class="welcome-title">A daily rhythm of prayer.</h1>
+      <p class="welcome-body">Adoration, Confession, Thanksgiving, Supplication. Drawn fresh each day from what you're praying through.</p>
+      <div id="auth-gate-body" class="welcome-form"></div>
+      <div class="welcome-foot">
+        <button type="button" id="gate-skip" class="welcome-skip">Continue without an account</button>
+        <p class="welcome-note">Your plan stays on this device. Sign in later to sync.</p>
+      </div>
     </div>
   </div>
 
@@ -146,13 +151,13 @@
   </div>
 
   <!-- Order matters: config + firebase, then content, app, then sync. -->
-  <script src="config.js?v=36"></script>
+  <script src="config.js?v=37"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="data.js?v=36"></script>
-  <script src="app.js?v=36"></script>
-  <script src="sync.js?v=36"></script>
+  <script src="data.js?v=37"></script>
+  <script src="app.js?v=37"></script>
+  <script src="sync.js?v=37"></script>
   <script>
     /* Register the service worker for offline / installable use. */
     if ("serviceWorker" in navigator) {
