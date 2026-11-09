@@ -1004,7 +1004,7 @@ html.show-gate body { overflow: hidden; }
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background: var(--accbg);
+  background: #3f7d4f; /* the app icon's green, all year (not the season accent) */
   color: var(--on-acc);
   display: grid;
   place-items: center;
