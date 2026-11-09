@@ -3,14 +3,16 @@
  * Fonts are cached at runtime on first online visit, then served offline.
  * Strategy: navigations = network-first (fresh when online, cached when not);
  * other GETs = cache-first with runtime caching. */
-const CACHE = "ppp-v1";
+const CACHE = "ppp-v2";
 const CORE = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-512.png",
-  "./apple-touch-icon.png"
+  "./apple-touch-icon.png",
+  "./favicon.svg",
+  "./favicon-32.png"
 ];
 
 self.addEventListener("install", function (e) {

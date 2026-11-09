@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="104" fill="#3f7d4f"/>
+  <defs>
+    <g id="h">
+      <path fill="#faf8f4" d="M260 86 C 278 94, 302 140, 316 192 C 326 230, 332 260, 336 290 L 374 378 L 318 412 L 262 322 Z"/>
+      <g fill="none" stroke="#3f7d4f" stroke-width="7" stroke-linecap="round">
+        <path d="M262 198 C 290 210, 298 262, 270 304"/>
+        <path d="M303 150 C 292 150, 283 154, 276 160"/>
+        <path d="M313 186 C 301 186, 292 190, 285 196"/>
+        <path d="M361 354 L 303 388"/>
+      </g>
+    </g>
+  </defs>
+  <g transform="translate(256 252) scale(1.32) translate(-256 -249)">
+    <use href="#h"/>
+    <use href="#h" transform="translate(512 0) scale(-1 1)"/>
+  </g>
+</svg>
