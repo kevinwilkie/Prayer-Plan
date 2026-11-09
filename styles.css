@@ -751,23 +751,53 @@ html.sheet-open body { overflow: hidden; }
 .item-actions { display: flex; gap: 12px; align-items: baseline; flex: none; }
 
 /* ===========================================================================
- * ANSWERED
+ * JOURNAL — segmented control, answered timeline, notes
  * ========================================================================= */
-#answered-content { padding: 6px 28px 24px; display: flex; flex-direction: column; }
-.ans-empty {
-  padding: 20px 32px;
-  text-align: center;
-  font-family: var(--font-prose);
-  font-style: italic;
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--mut);
+.seg {
+  margin: 18px var(--pad-x) 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--tint);
+  border-radius: 10px;
+  padding: 3px;
 }
-.ans-row { padding: 16px 0; border-bottom: 1px solid var(--hair); }
-.ans-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.ans-name { font-size: 17px; font-weight: 600; }
-.ans-date { font-size: 12.5px; color: var(--acc); white-space: nowrap; }
-.ans-text { font-family: var(--font-prose); font-size: 15.5px; line-height: 1.55; margin-top: 4px; color: var(--soft); }
+.seg-btn {
+  appearance: none;
+  min-height: 38px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--soft);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  position: relative;
+}
+.seg-btn::after { content: ""; position: absolute; inset: -3px 0; }
+.seg-btn.is-active { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+.journal-list { padding: 8px var(--pad-x) 24px; display: flex; flex-direction: column; }
+.j-month { color: var(--mut); margin-top: 16px; }
+.j-entry {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 0;
+  border: none;
+  border-bottom: 1px solid var(--hair);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.j-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.j-name { font-size: 18px; font-weight: 600; }
+.j-date { font-size: 13px; color: var(--acc); white-space: nowrap; }
+.j-text { font-family: var(--font-prose); font-size: 15.5px; line-height: 1.55; color: var(--soft); }
+.j-note { padding: 16px 0; }
+.j-note-label { color: var(--mut); }
+.j-note-text { font-family: var(--font-prose); font-size: 16px; line-height: 1.55; margin-top: 2px; white-space: pre-line; }
 
 /* ===========================================================================
  * MORE

@@ -44,7 +44,8 @@
   var libFab = document.getElementById("lib-fab");
   var sheetEl = document.getElementById("sheet");
   var sheetPanel = document.getElementById("sheet-panel");
-  var answeredContentEl = document.getElementById("answered-content");
+  var journalSegEl = document.getElementById("journal-seg");
+  var journalContentEl = document.getElementById("journal-content");
   var moreContentEl = document.getElementById("more-content");
   var themeMeta = document.getElementById("theme-color-meta");
   var tabs = document.querySelectorAll(".tab");
@@ -909,40 +910,77 @@
   libFab.addEventListener("click", function () { openSheet({ mode: "add", bank: bankTab }); });
 
   // ===========================================================================
-  // ANSWERED SCREEN
+  // JOURNAL — Answered (from people's cards) + Notes (from each day)
   // ===========================================================================
-  function renderAnswered() {
-    answeredContentEl.innerHTML = "";
+  var JOURNAL_TAB_KEY = "prayerPlan.journalTab";
+  var journalTab = "answered";
+  try { if (sessionStorage.getItem(JOURNAL_TAB_KEY) === "notes") journalTab = "notes"; } catch (e) {}
+
+  function logDate(a) {
+    if (a.ts) { var d = new Date(a.ts); if (!isNaN(d)) return d; }
+    var p = new Date(a.date || ""); return isNaN(p) ? null : p;
+  }
+
+  function renderJournal() {
+    try { sessionStorage.setItem(JOURNAL_TAB_KEY, journalTab); } catch (e) {}
+    journalSegEl.innerHTML = "";
+    [["answered", "Answered"], ["notes", "Notes"]].forEach(function (o) {
+      var b = el("button", "seg-btn" + (journalTab === o[0] ? " is-active" : ""), o[1]); b.type = "button";
+      b.setAttribute("role", "tab"); b.setAttribute("aria-selected", journalTab === o[0] ? "true" : "false");
+      b.addEventListener("click", function () { journalTab = o[0]; renderJournal(); });
+      journalSegEl.appendChild(b);
+    });
+    journalContentEl.innerHTML = "";
+    if (journalTab === "answered") renderAnsweredList(); else renderNotesList();
+  }
+
+  function renderAnsweredList() {
     var entries = [];
     subjects.forEach(function (subj) {
       var ex = cards.extras[subj.name];
       if (!ex || !ex.answers) return;
-      ex.answers.forEach(function (a, idx) {
-        entries.push({ name: subj.name, text: a.text, date: a.date, ts: a.ts || 0, idx: idx });
+      ex.answers.forEach(function (a) {
+        var d = logDate(a);
+        entries.push({ name: subj.name, text: a.text, a: a, d: d, sort: d ? d.getTime() : (a.ts || 0) });
       });
     });
-    entries.sort(function (a, b) { return b.ts - a.ts; });
-    if (entries.length === 0) {
-      answeredContentEl.appendChild(el("div", "ans-empty",
-        "Nothing logged yet. On a Supplication prayer card, record how God answers — it gathers here as a timeline of His faithfulness."));
+    entries.sort(function (x, y) { return y.sort - x.sort; });
+    if (!entries.length) {
+      journalContentEl.appendChild(el("div", "empty-copy", "Nothing logged yet. Open a person in Library and record how God answers."));
       return;
     }
+    var thisYear = new Date().getFullYear(), lastGroup = null;
     entries.forEach(function (en) {
-      var row = el("div", "ans-row");
-      var top = el("div", "ans-top");
-      top.appendChild(el("div", "ans-name", en.name));
-      var right = el("div", "item-actions");
-      right.appendChild(el("div", "ans-date", en.date));
-      var x = el("button", "xbtn", "×"); x.type = "button"; x.setAttribute("aria-label", "Delete");
-      x.addEventListener("click", function () {
-        var ex = cards.extras[en.name];
-        if (ex && ex.answers) { ex.answers.splice(en.idx, 1); saveCards(); renderAnswered(); }
-      });
-      right.appendChild(x);
-      top.appendChild(right);
+      var group = en.d ? MONTHS[en.d.getMonth()] + (en.d.getFullYear() !== thisYear ? " " + en.d.getFullYear() : "") : "Earlier";
+      if (group !== lastGroup) { journalContentEl.appendChild(el("div", "sec-label j-month", group)); lastGroup = group; }
+      var row = el("button", "j-entry"); row.type = "button";
+      var top = el("span", "j-top");
+      top.appendChild(el("span", "j-name", en.name));
+      top.appendChild(el("span", "j-date", shortLogDate(en.a)));
       row.appendChild(top);
-      row.appendChild(el("div", "ans-text", en.text));
-      answeredContentEl.appendChild(row);
+      row.appendChild(el("span", "j-text", en.text));
+      row.addEventListener("click", function () {
+        bankTab = "people"; openItem = { bank: "people", name: en.name };
+        showView("library");
+      });
+      journalContentEl.appendChild(row);
+    });
+  }
+
+  function renderNotesList() {
+    var keys = state.order.slice().reverse().filter(function (k) {
+      var j = state.journal[k]; return state.history[k] && j && j.notes && j.notes.trim();
+    });
+    if (!keys.length) {
+      journalContentEl.appendChild(el("div", "empty-copy", "No notes yet. Jot one during today's session."));
+      return;
+    }
+    keys.forEach(function (k) {
+      var row = el("button", "j-entry j-note"); row.type = "button";
+      row.appendChild(el("span", "sec-label j-note-label", state.history[k].label));
+      row.appendChild(el("span", "j-note-text", state.journal[k].notes.trim()));
+      row.addEventListener("click", function () { viewKey = k; session = null; showView("today"); });
+      journalContentEl.appendChild(row);
     });
   }
 
@@ -1087,7 +1125,7 @@
     tabs.forEach(function (t) { t.classList.toggle("is-active", t.dataset.view === name); });
     if (name === "today") renderToday();
     else if (name === "library") renderLibrary();
-    else if (name === "journal") renderAnswered();
+    else if (name === "journal") renderJournal();
     else if (name === "more") renderMore();
     window.scrollTo({ top: 0 });
   }
