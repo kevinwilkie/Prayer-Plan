@@ -613,7 +613,9 @@ body {
   color: var(--acc);
   cursor: pointer;
 }
-.pc-acts { display: flex; gap: 18px; }
+.pc-back, .pc-edit, .pc-delete { min-width: 44px; }
+.pc-acts { display: flex; gap: 6px; margin-right: -8px; }
+.pc-edit, .pc-delete { padding: 0 8px; }
 .pc-edit { font-size: 15px; color: var(--soft); }
 .pc-delete { font-size: 15px; color: var(--supplication); }
 .pc-body { padding: 8px var(--pad-x) 32px; }
