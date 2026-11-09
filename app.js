@@ -47,6 +47,8 @@
   var journalSegEl = document.getElementById("journal-seg");
   var journalContentEl = document.getElementById("journal-content");
   var moreContentEl = document.getElementById("more-content");
+  var moreMainEl = document.getElementById("more-main");
+  var moreSubEl = document.getElementById("more-sub");
   var themeMeta = document.getElementById("theme-color-meta");
   var tabs = document.querySelectorAll(".tab");
   var screens = document.querySelectorAll(".screen");
@@ -177,7 +179,7 @@
   // ===========================================================================
   function freshState() {
     return { version: 3, queues: { adoration: [], confession: [], thanksgiving: [], supplication: {} },
-      history: {}, order: [], journal: {} };
+      history: {}, order: [], journal: {}, settings: {} };
   }
   function loadState() {
     try {
@@ -188,6 +190,7 @@
       s.queues = s.queues || { adoration: [], confession: [], thanksgiving: [], supplication: {} };
       s.queues.supplication = s.queues.supplication || {};
       s.history = s.history || {}; s.order = s.order || []; s.journal = s.journal || {};
+      s.settings = s.settings || {};
       return s;
     } catch (e) { return freshState(); }
   }
@@ -208,8 +211,21 @@
     }
     return picked;
   }
-  // How many items to draw per bank each day (data.js defaults for now).
-  function dailyCount(bank) { return counts[bank] || 1; }
+  // How many items to draw per bank each day: the user's setting (More → Daily
+  // draw, saved in state.settings.dailyCounts and synced), else the data.js default.
+  var DRAW_MIN = 1, DRAW_MAX = 5;
+  function dailyCount(bank) {
+    var set = state.settings && state.settings.dailyCounts;
+    var n = set && set[bank] != null ? +set[bank] : (counts[bank] || 1);
+    if (!(n >= DRAW_MIN)) n = DRAW_MIN;
+    return Math.min(DRAW_MAX, Math.round(n));
+  }
+  function setDailyCount(bank, n) {
+    if (!state.settings) state.settings = {};
+    if (!state.settings.dailyCounts) state.settings.dailyCounts = {};
+    state.settings.dailyCounts[bank] = Math.max(DRAW_MIN, Math.min(DRAW_MAX, n));
+    saveState();
+  }
   function generatePlan(key) {
     var date = dateFromKey(key);
     var q = state.queues;
@@ -1014,95 +1030,139 @@
   function exportText() { return JSON.stringify({ content: content, cards: cards.extras }, null, 1); }
 
   var openAttr = -1;
-  function renderMore() {
-    moreContentEl.innerHTML = "";
+  var moreSub = null; // null | "attrs" | "backup" | "about"
+  var SUB_TITLE = { attrs: "Attributes of God", backup: "Back up & restore", about: "About" };
 
-    // (account / sync box is a static element above #more-content, filled by sync.js)
+  function renderMore() {
+    moreMainEl.hidden = !!moreSub;
+    moreSubEl.hidden = !moreSub;
+    if (moreSub) { renderMoreSub(); return; }
+    moreSubEl.innerHTML = "";
+    moreContentEl.innerHTML = "";
+    // (the account card is #account-box, above this, filled by sync.js)
 
     // Theme
-    var themeSec = el("div", "more-section");
-    themeSec.appendChild(el("div", "more-label", "Theme"));
-    var swRow = el("div", "swatch-row");
+    var themeSec = el("div");
+    themeSec.appendChild(el("div", "sec-label more-label", "Theme"));
+    var swRow = el("div", "swatches");
     var cur = currentStyle();
     STYLES.forEach(function (k) {
       var sw = el("button", "swatch" + (cur === k ? " is-active" : "")); sw.type = "button";
+      sw.setAttribute("aria-pressed", cur === k ? "true" : "false");
       sw.style.background = STYLE_SWATCH[k].bg; sw.style.color = STYLE_SWATCH[k].ink;
-      sw.appendChild(el("div", "swatch-aa", "Aa"));
-      sw.appendChild(el("div", "swatch-name", STYLE_LABEL[k]));
+      sw.appendChild(el("span", "swatch-aa", "Aa"));
+      sw.appendChild(el("span", "swatch-name", STYLE_LABEL[k]));
       sw.addEventListener("click", function () { applyStyle(k); renderMore(); });
       swRow.appendChild(sw);
     });
     themeSec.appendChild(swRow);
     moreContentEl.appendChild(themeSec);
 
-    // Attributes of God
-    var attrSec = el("div", "more-section");
-    attrSec.appendChild(el("div", "more-label", "Attributes of God"));
-    attrSec.appendChild(el("div", "more-note", "A reference for Adoration — tap any to read."));
-    var list = el("div", "attr-list");
-    PRAYER_PLAN.attributes.forEach(function (attr, i) {
-      var row = el("div", "attr-row");
-      var top = el("div", "attr-top");
-      top.appendChild(el("div", "attr-name", attr.name));
-      top.appendChild(el("div", "attr-chev", openAttr === i ? "–" : "+"));
-      row.appendChild(top);
-      if (openAttr === i) row.appendChild(el("div", "attr-def", attr.definition));
-      row.addEventListener("click", function () { openAttr = openAttr === i ? -1 : i; renderMore(); });
-      list.appendChild(row);
+    // Daily draw
+    var drawSec = el("div");
+    drawSec.appendChild(el("div", "sec-label more-label", "Daily draw"));
+    var dcard = el("div", "info-card");
+    ["adoration", "confession", "thanksgiving"].forEach(function (k) {
+      var n = dailyCount(k);
+      var row = el("div", "draw-row");
+      row.appendChild(el("span", "draw-label", CAT_LABEL[k]));
+      var ctl = el("div", "stepper");
+      var dec = el("button", "step-btn", "−"); dec.type = "button";
+      dec.setAttribute("aria-label", "Fewer " + CAT_LABEL[k] + " items per day"); dec.disabled = n <= DRAW_MIN;
+      dec.addEventListener("click", function () { setDailyCount(k, n - 1); renderMore(); });
+      var val = el("span", "step-val", String(n)); val.setAttribute("aria-live", "polite");
+      var inc = el("button", "step-btn is-plus", "+"); inc.type = "button";
+      inc.setAttribute("aria-label", "More " + CAT_LABEL[k] + " items per day"); inc.disabled = n >= DRAW_MAX;
+      inc.addEventListener("click", function () { setDailyCount(k, n + 1); renderMore(); });
+      ctl.appendChild(dec); ctl.appendChild(val); ctl.appendChild(inc);
+      row.appendChild(ctl);
+      dcard.appendChild(row);
     });
-    attrSec.appendChild(list);
-    moreContentEl.appendChild(attrSec);
+    drawSec.appendChild(dcard);
+    drawSec.appendChild(el("div", "more-caption", "Applies from tomorrow's draw."));
+    moreContentEl.appendChild(drawSec);
 
-    // Back up / move devices
-    var backSec = el("div", "more-section");
-    backSec.appendChild(el("div", "more-label", "Back up / move devices"));
-    backSec.appendChild(el("div", "more-note", "Copy this to back up your plan, or paste a backup below and import it."));
-    var ta = el("textarea", "backup-area"); ta.rows = 4; ta.value = exportText();
-    backSec.appendChild(ta);
-    var btns = el("div", "backup-btns");
-    var copy = el("button", "acc-btn", "Copy"); copy.type = "button";
-    copy.addEventListener("click", function () {
-      ta.select();
-      var done = function () { copy.textContent = "Copied ✓"; setTimeout(function () { copy.textContent = "Copy"; }, 1500); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(done, function () { try { document.execCommand("copy"); done(); } catch (e) {} });
-      else { try { document.execCommand("copy"); done(); } catch (e) {} }
+    // Reference list
+    var ref = el("div", "info-card");
+    [["attrs", "Attributes of God"], ["backup", "Back up & restore"], ["about", "About"]].forEach(function (o) {
+      var r = el("button", "ref-row"); r.type = "button";
+      r.appendChild(el("span", null, o[1]));
+      r.appendChild(el("span", "ref-chev", "›"));
+      r.addEventListener("click", function () { moreSub = o[0]; renderMore(); window.scrollTo({ top: 0 }); });
+      ref.appendChild(r);
     });
-    var imp = el("button", "ghost-btn", "Import"); imp.type = "button";
-    var msg = el("div", "backup-msg");
-    imp.addEventListener("click", function () {
-      if (!ta.value.trim()) { ta.focus(); return; }
-      if (typeof window.confirm === "function" && !window.confirm("Import this plan? It replaces your current banks, people, and prayer cards.")) return;
-      var r = importPlan(ta.value);
-      msg.textContent = r.msg;
-      msg.className = "backup-msg " + (r.ok ? "ok" : "err");
-      if (r.ok) { renderToday(); }
-    });
-    btns.appendChild(copy); btns.appendChild(imp);
-    backSec.appendChild(btns);
-    backSec.appendChild(msg);
-    moreContentEl.appendChild(backSec);
+    moreContentEl.appendChild(ref);
 
-    // About + reset
-    var aboutSec = el("div", "more-section");
-    aboutSec.appendChild(el("div", "more-label", "About"));
-    var about = el("div", "about-text");
-    about.appendChild(document.createTextNode("Prayer Plan draws a fresh ACTS set from your banks each day. Everything you add is saved on this device and syncs to your account when signed in. Inspired by Paul Miller's "));
-    var italic = el("span", null, "A Praying Life"); italic.style.fontStyle = "italic";
-    about.appendChild(italic);
-    about.appendChild(document.createTextNode("."));
-    aboutSec.appendChild(about);
     var reset = el("button", "reset-link", "Reset this device"); reset.type = "button";
     reset.addEventListener("click", function () {
       if (typeof window.confirm === "function" &&
-        !window.confirm("Reset erases your banks, people, cards, and history on this device. If you're signed in, your cloud copy is untouched. Continue?")) return;
+        !window.confirm("Reset erases your Library, people, cards, and history on this device. If you're signed in, your cloud copy is untouched. Continue?")) return;
       try {
         localStorage.removeItem(CONTENT_KEY); localStorage.removeItem(CARDS_KEY);
         localStorage.removeItem(STATE_KEY); localStorage.removeItem(CUSTOM_KEY);
       } catch (e) {}
       window.location.reload();
     });
-    aboutSec.appendChild(reset);
-    moreContentEl.appendChild(aboutSec);
+    moreContentEl.appendChild(reset);
+  }
+
+  function renderMoreSub() {
+    moreSubEl.innerHTML = "";
+    var head = el("div", "sub-head");
+    var back = el("button", "pc-back", "‹ More"); back.type = "button";
+    back.addEventListener("click", function () { moreSub = null; renderMore(); });
+    head.appendChild(back);
+    head.appendChild(el("h1", "screen-title", SUB_TITLE[moreSub]));
+    moreSubEl.appendChild(head);
+    var body = el("div", "sub-body");
+    moreSubEl.appendChild(body);
+
+    if (moreSub === "attrs") {
+      body.appendChild(el("div", "more-caption", "A reference for Adoration. Tap any to read."));
+      PRAYER_PLAN.attributes.forEach(function (attr, i) {
+        var open = openAttr === i;
+        var row = el("div", "attr-row");
+        var btn = el("button", "attr-top"); btn.type = "button";
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+        btn.appendChild(el("span", "attr-name", attr.name));
+        btn.appendChild(el("span", "attr-chev", open ? "–" : "+"));
+        btn.addEventListener("click", function () { openAttr = open ? -1 : i; renderMore(); });
+        row.appendChild(btn);
+        if (open) row.appendChild(el("div", "attr-def", attr.definition));
+        body.appendChild(row);
+      });
+    } else if (moreSub === "backup") {
+      body.appendChild(el("div", "sub-prose", "Copy this to back up your plan, or paste a backup and import it."));
+      var ta = el("textarea", "backup-area"); ta.rows = 12; ta.value = exportText();
+      ta.setAttribute("aria-label", "Backup text");
+      body.appendChild(ta);
+      var btns = el("div", "backup-btns");
+      var copy = el("button", "btn-acc", "Copy"); copy.type = "button";
+      copy.addEventListener("click", function () {
+        ta.select();
+        var done = function () { copy.textContent = "Copied ✓"; setTimeout(function () { copy.textContent = "Copy"; }, 1500); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(done, function () { try { document.execCommand("copy"); done(); } catch (e) {} });
+        else { try { document.execCommand("copy"); done(); } catch (e) {} }
+      });
+      var imp = el("button", "btn-outline", "Import…"); imp.type = "button";
+      var msg = el("div", "backup-msg");
+      imp.addEventListener("click", function () {
+        if (!ta.value.trim() || ta.value === exportText()) { msg.className = "backup-msg"; msg.textContent = "Paste a backup into the box above, then tap Import."; ta.focus(); ta.select(); return; }
+        if (typeof window.confirm === "function" && !window.confirm("Import this plan? It replaces your current Library, people, and prayer cards.")) return;
+        var r = importPlan(ta.value);
+        msg.textContent = r.msg;
+        msg.className = "backup-msg " + (r.ok ? "ok" : "err");
+      });
+      btns.appendChild(copy); btns.appendChild(imp);
+      body.appendChild(btns);
+      body.appendChild(msg);
+    } else if (moreSub === "about") {
+      var about = el("div", "sub-prose about-text");
+      about.appendChild(document.createTextNode("Prayer Plan draws a fresh ACTS set from your Library each day, working through every item before it repeats. Everything is saved on this device and syncs to your account when signed in. Prayer cards are inspired by Paul Miller's "));
+      about.appendChild(el("i", null, "A Praying Life"));
+      about.appendChild(document.createTextNode("."));
+      body.appendChild(about);
+    }
   }
 
   // ===========================================================================
@@ -1127,10 +1187,11 @@
     else if (name === "library") renderLibrary();
     else if (name === "journal") renderJournal();
     else if (name === "more") renderMore();
+    if (name !== "more") moreSub = null;
     window.scrollTo({ top: 0 });
   }
   tabs.forEach(function (t) {
-    t.addEventListener("click", function () { openItem = null; showView(t.dataset.view); });
+    t.addEventListener("click", function () { openItem = null; moreSub = null; showView(t.dataset.view); });
   });
 
   // ---- day arrows + keyboard ------------------------------------------------

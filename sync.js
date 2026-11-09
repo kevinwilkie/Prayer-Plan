@@ -56,18 +56,45 @@
   function isSkipped() { try { return localStorage.getItem("prayerPlan.gate") === "off"; } catch (e) { return false; } }
   if (skipBtn) skipBtn.addEventListener("click", function () { setSkip(); hideGate(); });
 
-  var lastStatus = "";
-  function setStatus(s) { lastStatus = s; var el = document.getElementById("sync-status"); if (el) el.textContent = s; }
+  // Sync status shown on the More → account card ("Synced · just now").
+  var lastStatus = "", lastSyncedAt = 0;
+  function ago(t) {
+    var m = Math.floor((Date.now() - t) / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return m + " min ago";
+    var h = Math.floor(m / 60);
+    return h < 24 ? h + (h === 1 ? " hour ago" : " hours ago") : "a while ago";
+  }
+  function statusLine() {
+    if (/^Synced/.test(lastStatus)) return lastSyncedAt ? "Synced · " + ago(lastSyncedAt) : "Synced";
+    return lastStatus || "Signed in";
+  }
+  function setStatus(s) {
+    lastStatus = s;
+    if (/^Synced/.test(s)) lastSyncedAt = Date.now();
+    var el = document.getElementById("sync-status"); if (el) el.textContent = statusLine();
+  }
+  setInterval(function () { var el = document.getElementById("sync-status"); if (el) el.textContent = statusLine(); }, 30000);
+
+  // The account card: avatar initial, name, status, and an action on the right.
+  function accountCard(initial, name, sub, action, onClick) {
+    var c = elc(onClick ? "button" : "div", "acct-card");
+    if (onClick) { c.type = "button"; c.addEventListener("click", onClick); }
+    c.appendChild(elc("span", "acct-avatar", initial));
+    var t = elc("span", "acct-text");
+    t.appendChild(elc("span", "acct-name", name));
+    var st = elc("span", "acct-sub", sub); t.appendChild(st);
+    c.appendChild(t);
+    if (action) c.appendChild(elc("span", "acct-action", action));
+    return { card: c, sub: st };
+  }
 
   if (!configured || !hasLib) {
     hideGate();
     if (box) {
-      var c0 = elc("div", "card");
-      c0.appendChild(elc("h3", "add-title", "Account"));
-      c0.appendChild(elc("p", "bank-intro", !configured
+      box.appendChild(accountCard("?", "Not signed in", !configured
         ? "Accounts aren't configured yet."
-        : "You're offline — sign-in needs a connection. The app works locally and will sync once you're online."));
-      box.appendChild(c0);
+        : "Offline. Sign in once you're connected.", "", null).card);
     }
     return;
   }
@@ -129,58 +156,69 @@
     container.appendChild(toggle);
   }
 
+  var acctOpen = false; // account actions expanded under the card
   function renderAccountBox(user) {
     if (!box) return;
     box.innerHTML = "";
-    var card = elc("div", "card");
-    card.appendChild(elc("h3", "add-title", "Account"));
-    if (user) {
-      card.appendChild(elc("p", "bank-intro", "Signed in as " + (user.email || "your account") + ". Your plan syncs across devices."));
-      var st = elc("p", "settings-note"); st.id = "sync-status"; st.textContent = lastStatus; card.appendChild(st);
-      var bar = elc("div", "pc-btnbar");
-      var bUp = button("Back up to cloud now", "btn btn-primary"); bUp.addEventListener("click", manualBackup); bar.appendChild(bUp);
-      var bDown = button("Restore from cloud", "btn"); bDown.addEventListener("click", manualRestore); bar.appendChild(bDown);
-      card.appendChild(bar);
-      var out = button("Sign out", "btn");
-      out.addEventListener("click", function () {
-        // Signing out removes the plan from this device, so save it to the cloud first.
-        setStatus("Saving before sign out…");
-        pushNow().then(function (ok) {
-          if (!ok && typeof window.confirm === "function" &&
-            !window.confirm("Your latest changes couldn't be saved to the cloud. Signing out removes your plan from this device. Sign out anyway?")) return;
-          auth.signOut();
-        });
-      });
-      card.appendChild(out);
-      card.appendChild(renderDeleteAccount(user));
-    } else {
-      card.appendChild(elc("p", "bank-intro", "Using this device only. Sign in to sync your plan across devices."));
-      var si = button("Sign in / create account", "btn btn-primary");
-      si.addEventListener("click", function () { try { localStorage.removeItem("prayerPlan.gate"); } catch (e) {} showGate(); });
-      card.appendChild(si);
+    if (!user) {
+      acctOpen = false;
+      box.appendChild(accountCard("?", "Not signed in", "Sign in to sync across devices", "Sign in ›", function () {
+        try { localStorage.removeItem("prayerPlan.gate"); } catch (e) {}
+        showGate();
+      }).card);
+      return;
     }
-    box.appendChild(card);
+    var name = user.displayName || user.email || "Your account";
+    var ac = accountCard(name.charAt(0).toUpperCase(), name, statusLine(), "›", function () {
+      acctOpen = !acctOpen; renderAccountBox(currentUser);
+    });
+    ac.sub.id = "sync-status";
+    ac.card.setAttribute("aria-expanded", acctOpen ? "true" : "false");
+    if (acctOpen) ac.card.classList.add("is-open");
+    box.appendChild(ac.card);
+    if (!acctOpen) return;
+
+    var panel = elc("div", "acct-panel");
+    panel.appendChild(elc("p", "acct-note", "Your plan syncs to this account across devices."));
+    var bar = elc("div", "acct-btns");
+    var bUp = button("Back up now", "btn-acc"); bUp.addEventListener("click", manualBackup); bar.appendChild(bUp);
+    var bDown = button("Restore from cloud", "btn-outline"); bDown.addEventListener("click", manualRestore); bar.appendChild(bDown);
+    panel.appendChild(bar);
+    var out = button("Sign out", "btn-outline acct-signout");
+    out.addEventListener("click", function () {
+      // Signing out removes the plan from this device, so save it to the cloud first.
+      setStatus("Saving before sign out…");
+      pushNow().then(function (ok) {
+        if (!ok && typeof window.confirm === "function" &&
+          !window.confirm("Your latest changes couldn't be saved to the cloud. Signing out removes your plan from this device. Sign out anyway?")) return;
+        auth.signOut();
+      });
+    });
+    panel.appendChild(out);
+    panel.appendChild(renderDeleteAccount(user));
+    box.appendChild(panel);
   }
 
   // "Delete account": permanently removes this account's cloud plan and login.
   // Firebase requires a fresh sign-in to delete a login, so we ask for the password.
   function renderDeleteAccount(user) {
-    var wrap = elc("div");
-    var open = button("Delete account", "reset-link");
+    var wrap = elc("div", "acct-del-wrap");
+    var open = button("Delete account", "reset-link acct-delete");
     wrap.appendChild(open);
     open.addEventListener("click", function () {
       wrap.innerHTML = "";
-      wrap.appendChild(elc("p", "settings-note",
+      wrap.appendChild(elc("p", "acct-note",
         "This permanently deletes " + (user.email || "this account") + " and everything saved to it in the cloud " +
         "(banks, people, cards, and history), and removes the plan from this device. It can't be undone. " +
-        "Want a copy first? Use “Back up / move devices” further down this page."));
+        "Want a copy first? Use More → Back up & restore."));
       var pw = input("password", "Your password");
-      wrap.appendChild(field("Enter your password to confirm", pw));
-      var msg = elc("p", "settings-note");
-      var bar = elc("div", "pc-btnbar");
-      var go = button("Permanently delete account", "btn");
-      go.style.color = "#b3402f";
-      var cancel = button("Cancel", "btn");
+      pw.setAttribute("aria-label", "Enter your password to confirm");
+      pw.className = "field-box";
+      wrap.appendChild(pw);
+      var msg = elc("p", "acct-msg");
+      var bar = elc("div", "acct-btns");
+      var go = button("Permanently delete account", "btn-outline acct-danger");
+      var cancel = button("Cancel", "btn-outline");
       cancel.addEventListener("click", function () { renderAccountBox(currentUser); });
       go.addEventListener("click", function () {
         if (!pw.value) { msg.textContent = "Please enter your password."; pw.focus(); return; }
@@ -299,7 +337,11 @@
     window.location.reload();
   }
 
-  updateUI(null);
+  // Until Firebase reports back, a returning user sees "Signing in…" rather than
+  // a signed-out card (and no gate flash).
+  var wasAuthed = false; try { wasAuthed = localStorage.getItem("prayerPlan.authed") === "1"; } catch (e) {}
+  if (wasAuthed && box) { box.innerHTML = ""; box.appendChild(accountCard("·", "Signing in…", "Checking your account", "", null).card); }
+  else updateUI(null);
   auth.onAuthStateChanged(function (user) {
     if (user) { if (!currentUser) onLogin(user); else updateUI(user); }
     else { if (currentUser) onLogout(); else updateUI(null); }
